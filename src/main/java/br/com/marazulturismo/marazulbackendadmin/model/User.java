@@ -40,8 +40,18 @@ public class User {
 
     private Date disabledAt;
 
-    public User(String nome, String email, String senhaHash) {
+    public User(
+            String nome,
+            Date admissionDate,
+            Position position,
+            UserRole userRole,
+            String email,
+            String senhaHash) {
+
         this.nome = nome;
+        this.admissionDate = admissionDate;
+        this.position = position;
+        this.userRole = userRole;
         this.email = email;
         this.senhaHash = senhaHash;
     }
