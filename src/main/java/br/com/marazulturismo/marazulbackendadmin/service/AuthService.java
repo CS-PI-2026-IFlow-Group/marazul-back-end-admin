@@ -2,7 +2,6 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
@@ -34,7 +33,7 @@ public class AuthService {
                 dto.nome(),
                 new Date(),
                 dto.position(),
-                UserRole.ADMIN,
+                dto.userRole(),
                 dto.email(),
                 senhaHash
         );

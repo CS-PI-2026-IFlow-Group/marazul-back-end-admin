@@ -1,9 +1,11 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.LoginResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.service.AuthService;
+import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +21,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -32,13 +36,14 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody @Valid LoginRequestDTO dto) {
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
         User user = authService.login(dto);
-        return ResponseEntity.ok(Map.of(
-                "mensagem", "Login realizado com sucesso.",
-                "id", user.getId(),
-                "nome", user.getNome(),
-                "email", user.getEmail()
+        String token = jwtService.generateToken(user);
+        return ResponseEntity.ok(new LoginResponseDTO(
+                token,
+                user.getId(),
+                user.getNome(),
+                user.getEmail()
         ));
     }
 }

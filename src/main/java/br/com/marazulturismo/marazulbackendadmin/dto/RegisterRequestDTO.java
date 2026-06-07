@@ -1,6 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.dto;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,5 +21,8 @@ public record RegisterRequestDTO(
         String senha,
 
         @NotNull
-        Position position
+        Position position,
+
+        @NotNull
+        UserRole userRole
 ) {}
