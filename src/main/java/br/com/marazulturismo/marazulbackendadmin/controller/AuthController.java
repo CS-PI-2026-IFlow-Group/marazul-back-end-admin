@@ -1,6 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.ForgotPasswordRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ResetPasswordRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
@@ -55,5 +56,11 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody @Valid ForgotPasswordRequestDTO dto) {
         passwordResetService.forgotPassword(dto.email());
         return ResponseEntity.ok(Map.of("mensagem", "Se o e-mail estiver cadastrado, você receberá as instruções de recuperação."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody @Valid ResetPasswordRequestDTO dto) {
+        passwordResetService.resetPassword(dto.token(), dto.novaSenha());
+        return ResponseEntity.ok(Map.of("mensagem", "Senha redefinida com sucesso."));
     }
 }

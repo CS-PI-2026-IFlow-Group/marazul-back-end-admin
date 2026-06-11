@@ -1,9 +1,12 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
+import br.com.marazulturismo.marazulbackendadmin.exception.InvalidOrExpiredTokenException;
+import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -14,6 +17,7 @@ public class PasswordResetService {
 
     private final UserRepository userRepository;
     private final JavaMailSender mailSender;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -26,6 +30,7 @@ public class PasswordResetService {
     public PasswordResetService(UserRepository userRepository, JavaMailSender mailSender) {
         this.userRepository = userRepository;
         this.mailSender = mailSender;
+        this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
     public void forgotPassword(String email) {
@@ -38,6 +43,19 @@ public class PasswordResetService {
 
             sendResetEmail(email, token);
         });
+    }
+
+    public void resetPassword(String token, String novaSenha) {
+        User user = userRepository.findByResetToken(token)
+                .orElseThrow(InvalidOrExpiredTokenException::new);
+
+        if (user.getResetTokenExpiration().before(new Date())) {
+            throw new InvalidOrExpiredTokenException();
+        }
+
+        user.updateSenhaHash(passwordEncoder.encode(novaSenha));
+        user.clearPasswordResetToken();
+        userRepository.save(user);
     }
 
     private void sendResetEmail(String to, String token) {
