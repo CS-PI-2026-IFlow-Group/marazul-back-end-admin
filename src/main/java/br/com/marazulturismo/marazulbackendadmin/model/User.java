@@ -40,6 +40,26 @@ public class User {
 
     private Date disabledAt;
 
+    @Column(name = "reset_token", unique = true)
+    private String resetToken;
+
+    @Column(name = "reset_token_expiration")
+    private Date resetTokenExpiration;
+
+    public void setPasswordResetToken(String token, Date expiration) {
+        this.resetToken = token;
+        this.resetTokenExpiration = expiration;
+    }
+
+    public void clearPasswordResetToken() {
+        this.resetToken = null;
+        this.resetTokenExpiration = null;
+    }
+
+    public void updateSenhaHash(String senhaHash) {
+        this.senhaHash = senhaHash;
+    }
+
     public User(
             String nome,
             Date admissionDate,

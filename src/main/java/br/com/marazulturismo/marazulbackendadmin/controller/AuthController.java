@@ -1,11 +1,14 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
+import br.com.marazulturismo.marazulbackendadmin.dto.ForgotPasswordRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ResetPasswordRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.service.AuthService;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
+import br.com.marazulturismo.marazulbackendadmin.service.PasswordResetService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +25,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
+    private final PasswordResetService passwordResetService;
 
-    public AuthController(AuthService authService, JwtService jwtService) {
+    public AuthController(AuthService authService, JwtService jwtService, PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtService = jwtService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -45,5 +50,17 @@ public class AuthController {
                 user.getNome(),
                 user.getEmail()
         ));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody @Valid ForgotPasswordRequestDTO dto) {
+        passwordResetService.forgotPassword(dto.email());
+        return ResponseEntity.ok(Map.of("mensagem", "Se o e-mail estiver cadastrado, você receberá as instruções de recuperação."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody @Valid ResetPasswordRequestDTO dto) {
+        passwordResetService.resetPassword(dto.token(), dto.novaSenha());
+        return ResponseEntity.ok(Map.of("mensagem", "Senha redefinida com sucesso."));
     }
 }
