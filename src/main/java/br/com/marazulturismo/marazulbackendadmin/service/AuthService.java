@@ -27,15 +27,15 @@ public class AuthService {
             throw new EmailAlreadyExistsException(dto.email());
         }
 
-        String senhaHash = passwordEncoder.encode(dto.senha());
+        String passwordHash = passwordEncoder.encode(dto.password());
 
         User user = new User(
-                dto.nome(),
+                dto.name(),
                 new Date(),
                 dto.position(),
                 dto.userRole(),
                 dto.email(),
-                senhaHash
+                passwordHash
         );
 
         userRepository.save(user);
@@ -45,7 +45,7 @@ public class AuthService {
         User user = userRepository.findByEmail(dto.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (!passwordEncoder.matches(dto.senha(), user.getSenhaHash())) {
+        if (!passwordEncoder.matches(dto.senha(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
 
