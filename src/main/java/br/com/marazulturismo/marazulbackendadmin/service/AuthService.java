@@ -2,6 +2,7 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
@@ -27,18 +28,21 @@ public class AuthService {
             throw new EmailAlreadyExistsException(dto.email());
         }
 
-        String passwordHash = passwordEncoder.encode(dto.password());
-
         User user = new User(
                 dto.name(),
                 new Date(),
                 dto.position(),
                 dto.userRole(),
                 dto.email(),
-                passwordHash
+                null // null para o usuário settar ao receber o email
         );
 
         userRepository.save(user);
+
+        if (user.getUserRole().equals(UserRole.ADMIN)){
+            
+        }
+
     }
 
     public User login(LoginRequestDTO dto) {
