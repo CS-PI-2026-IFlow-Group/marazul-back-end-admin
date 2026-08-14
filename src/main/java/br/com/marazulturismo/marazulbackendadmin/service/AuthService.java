@@ -85,7 +85,7 @@ public class AuthService {
         return user;
     }
 
-// TODO: substitiuir pelo endpoint correto com a tela de redefinir senha
+// TODO: substitiuir pelo endpoint correto com a tela de definir senha
     private String buildUrl(String token){
         String baseUrl = definePasswordUrl;
         if(baseUrl.endsWith("/")) {
