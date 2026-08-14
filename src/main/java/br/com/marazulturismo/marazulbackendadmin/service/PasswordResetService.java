@@ -35,12 +35,7 @@ public class PasswordResetService {
 
     public void forgotPassword(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
-            String token = UUID.randomUUID().toString();
-            Date expiration = new Date(System.currentTimeMillis() + TOKEN_EXPIRATION_MS);
-
-            user.setPasswordResetToken(token, expiration);
-            userRepository.save(user);
-
+            String token = createResetToken(user);
             sendResetEmail(email, token);
         });
     }
@@ -70,5 +65,15 @@ public class PasswordResetService {
                 "Se você não solicitou a recuperação de senha, ignore este e-mail."
         );
         mailSender.send(message);
+    }
+
+    public String createResetToken(User user){
+        String token = UUID.randomUUID().toString();
+        Date expiration = new Date(System.currentTimeMillis() + TOKEN_EXPIRATION_MS);
+
+        user.setPasswordResetToken(token, expiration);
+        userRepository.save(user);
+
+        return token;
     }
 }

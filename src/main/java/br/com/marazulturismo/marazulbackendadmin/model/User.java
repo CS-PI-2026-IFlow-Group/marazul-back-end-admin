@@ -40,6 +40,12 @@ public class User {
 
     private Date disabledAt;
 
+    @Column(name = "cellphone_number", nullable = false)
+    private String cellphoneNumber;
+
+    @Column(name = "cnh", nullable = true)
+    private CNH cnh;
+
     @Column(name = "reset_token", unique = true)
     private String resetToken;
 
