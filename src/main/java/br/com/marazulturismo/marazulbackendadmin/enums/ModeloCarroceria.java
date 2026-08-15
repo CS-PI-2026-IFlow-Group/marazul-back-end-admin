@@ -5,7 +5,7 @@ package br.com.marazulturismo.marazulbackendadmin.enums;
  * Persistido como texto (EnumType.STRING), impedindo valores livres.
  */
 public enum ModeloCarroceria {
-    MARCOPOLLO,
+    MARCOPOLO,
     COMIL,
     IRIZAR_BRASIL,
     BUSSCAR
