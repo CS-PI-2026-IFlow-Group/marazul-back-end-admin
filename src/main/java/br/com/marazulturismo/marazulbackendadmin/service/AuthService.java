@@ -2,9 +2,11 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
+import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
 
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -41,12 +44,19 @@ public class AuthService {
             throw new EmailAlreadyExistsException(dto.email());
         }
 
+        Position position = dto.position() == Position.DRIVER ? Position.DRIVER : Position.OTHER;
+        CNH cnh = dto.cnhNumber() == null && dto.cnhType() == null
+                ? null
+                : new CNH(dto.cnhNumber(), dto.cnhType());
+
         User user = new User(
                 dto.name(),
                 new Date(),
-                dto.position(),
+                position,
                 dto.userRole(),
                 dto.email(),
+                dto.cellphoneNumber(),
+                cnh,
                 null // null para o usuário settar ao receber o email
         );
 
@@ -83,6 +93,27 @@ public class AuthService {
         }
 
         return user;
+    }
+
+
+    public void resendEmail(RegisterRequestDTO dto){
+    userRepository.findByEmail(dto.email()).ifPresent(user -> {
+        if (user.getUserRole().equals(UserRole.ADMIN)) {
+            String token = passwordResetService.createResetToken(user);
+            String redefineLink = buildUrl(token);
+
+            Context context = new Context();
+            context.setVariable("name", user.getName());
+            context.setVariable("link", redefineLink);
+
+            emailSenderService.sendEmailTemplate(
+                    user.getEmail(),
+                    "Success",
+                    "newRegister",
+                    context
+            );
+        }
+    });
     }
 
 // TODO: substitiuir pelo endpoint correto com a tela de definir senha

@@ -47,7 +47,10 @@ public class PasswordResetService {
         User user = userRepository.findByResetToken(token)
                 .orElseThrow(InvalidOrExpiredTokenException::new);
 
-        if (user.getResetTokenExpiration().before(new Date())) {
+        Date expiration = user.getResetTokenExpiration();
+        if (expiration == null || !expiration.after(new Date())) {
+            user.clearPasswordResetToken();
+            userRepository.save(user);
             throw new InvalidOrExpiredTokenException();
         }
 
@@ -60,7 +63,7 @@ public class PasswordResetService {
         Context context = new Context();
 
         String link = buildUrl(token);
-        context.setVariable(link, "link");
+        context.setVariable("link", link);
         emailSenderService.sendEmailTemplate(to, 
             "Recuperação de senha - Marazul Turismo",
             "passwordReset", context);

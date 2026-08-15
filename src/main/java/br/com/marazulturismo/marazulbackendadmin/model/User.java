@@ -40,10 +40,10 @@ public class User {
 
     private Date disabledAt;
 
-    @Column(name = "cellphone_number", nullable = false)
+    @Column(name = "cellphone_number")
     private String cellphoneNumber;
 
-    @Column(name = "cnh", nullable = true)
+    @Embedded
     private CNH cnh;
 
     @Column(name = "reset_token", unique = true)
@@ -72,6 +72,8 @@ public class User {
             Position position,
             UserRole userRole,
             String email,
+            String cellphoneNumber,
+            CNH cnh,
             String passwordHash) {
 
         this.name = name;
@@ -79,6 +81,8 @@ public class User {
         this.position = position;
         this.userRole = userRole;
         this.email = email;
+        this.cellphoneNumber = cellphoneNumber;
+        this.cnh = cnh;
         this.passwordHash = passwordHash;
     }
 }

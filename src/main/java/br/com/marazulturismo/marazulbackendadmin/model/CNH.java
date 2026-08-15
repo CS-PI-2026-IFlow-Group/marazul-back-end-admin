@@ -11,6 +11,14 @@ import jakarta.persistence.Enumerated;
 @Embeddable
 public class CNH {
 
+    protected CNH() {
+    }
+
+    public CNH(String number, CNHType type) {
+        this.number = number;
+        this.type = type;
+    }
+
     @Column(name = "cnh_number")
     private String number;
 
