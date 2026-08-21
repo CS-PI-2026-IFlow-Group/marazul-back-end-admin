@@ -4,8 +4,6 @@ import br.com.marazulturismo.marazulbackendadmin.exception.InvalidOrExpiredToken
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;

@@ -33,20 +33,18 @@ public class EmailSenderService {
 
 
     @Async
-    public void sendEmailTemplate(String recipient, String subject, String tamplate, Context context){
-        String tamplateString = templateEngine.process(tamplate, context);
+    public void sendEmailTemplate(String recipient, String subject, String template, Context context){
+        String templateString = templateEngine.process(template, context);
         MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper messageHelper;
         try{
-            messageHelper = new MimeMessageHelper(message, true);
+            MimeMessageHelper messageHelper = new MimeMessageHelper(message, true);
             messageHelper.setTo(recipient);
             messageHelper.setSubject(subject);
-            messageHelper.setText(tamplateString, true);
+            messageHelper.setText(templateString, true);
+            mailSender.send(message);
         }catch (MessagingException e){
             e.printStackTrace();
         }
-
-        mailSender.send(message);
     }
     
 }
