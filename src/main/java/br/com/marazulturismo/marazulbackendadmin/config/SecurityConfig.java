@@ -50,7 +50,8 @@ public class SecurityConfig {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(
-                    "{\"erro\":\"Autenticação necessária. Credencial ausente ou inválida.\"}");
+                    "{\"erro\":\"Autenticação necessária. Credencial ausente ou inválida.\","
+                            + "\"message\":\"Autenticação necessária. Credencial ausente ou inválida.\"}");
         };
     }
 

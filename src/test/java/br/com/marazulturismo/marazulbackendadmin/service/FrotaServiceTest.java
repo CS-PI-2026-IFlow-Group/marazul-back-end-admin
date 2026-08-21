@@ -38,8 +38,7 @@ class FrotaServiceTest {
         return new VeiculoRequestDTO(
                 "1001",
                 "ABC1D23",
-                "Mercedes-Benz",
-                ModeloCarroceria.MARCOPOLLO,
+                ModeloCarroceria.MARCOPOLO,
                 TipoVeiculo.LD,
                 2022,
                 46,
@@ -68,13 +67,28 @@ class FrotaServiceTest {
         when(veiculoRepository.save(any(Veiculo.class))).thenAnswer(inv -> inv.getArgument(0));
 
         VeiculoRequestDTO dto = new VeiculoRequestDTO(
-                "1001", "  abc1d23 ", "Mercedes-Benz",
-                ModeloCarroceria.MARCOPOLLO, TipoVeiculo.LD,
+                "1001", "  abc1d23 ",
+                ModeloCarroceria.MARCOPOLO, TipoVeiculo.LD,
                 2022, 46, null, null);
 
         VeiculoResponseDTO response = frotaService.cadastrar(dto);
 
         assertThat(response.placa()).isEqualTo("ABC1D23");
+    }
+
+    @Test
+    void cadastrar_persistePlacaSemHifen() {
+        when(veiculoRepository.existsByPlaca("ABC1234")).thenReturn(false);
+        when(veiculoRepository.save(any(Veiculo.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        VeiculoRequestDTO dto = new VeiculoRequestDTO(
+                "1001", "abc-1234",
+                ModeloCarroceria.MARCOPOLO, TipoVeiculo.LD,
+                2022, 46, null, null);
+
+        VeiculoResponseDTO response = frotaService.cadastrar(dto);
+
+        assertThat(response.placa()).isEqualTo("ABC1234");
     }
 
     @Test
@@ -90,7 +104,7 @@ class FrotaServiceTest {
     @Test
     void excluir_realizaInativacaoLogica() {
         Veiculo veiculo = new Veiculo(
-                "1001", "ABC1D23", "Volvo",
+                "1001", "ABC1D23",
                 ModeloCarroceria.BUSSCAR, TipoVeiculo.DD,
                 2021, 50, null, StatusVeiculo.ATIVO);
         when(veiculoRepository.findById(1L)).thenReturn(Optional.of(veiculo));
@@ -112,14 +126,14 @@ class FrotaServiceTest {
     @Test
     void atualizar_rejeitaPlacaDeOutroVeiculo() {
         Veiculo veiculo = new Veiculo(
-                "1001", "ABC1D23", "Volvo",
+                "1001", "ABC1D23",
                 ModeloCarroceria.COMIL, TipoVeiculo.CONVENCIONAL,
                 2020, 44, null, StatusVeiculo.ATIVO);
         when(veiculoRepository.findById(1L)).thenReturn(Optional.of(veiculo));
         when(veiculoRepository.existsByPlacaAndIdNot("XYZ9K88", 1L)).thenReturn(true);
 
         VeiculoRequestDTO dto = new VeiculoRequestDTO(
-                "1001", "XYZ9K88", "Volvo",
+                "1001", "XYZ9K88",
                 ModeloCarroceria.COMIL, TipoVeiculo.CONVENCIONAL,
                 2020, 44, null, StatusVeiculo.ATIVO);
 

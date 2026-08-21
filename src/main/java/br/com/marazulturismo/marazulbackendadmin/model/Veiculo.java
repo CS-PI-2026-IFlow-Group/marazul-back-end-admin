@@ -26,9 +26,6 @@ public class Veiculo {
     @Column(nullable = false, unique = true)
     private String placa;
 
-    @Column(nullable = false)
-    private String marca;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ModeloCarroceria modelo;
@@ -52,7 +49,6 @@ public class Veiculo {
     public Veiculo(
             String prefixo,
             String placa,
-            String marca,
             ModeloCarroceria modelo,
             TipoVeiculo tipo,
             Integer ano,
@@ -62,7 +58,6 @@ public class Veiculo {
 
         this.prefixo = prefixo;
         this.placa = placa;
-        this.marca = marca;
         this.modelo = modelo;
         this.tipo = tipo;
         this.ano = ano;
@@ -74,7 +69,6 @@ public class Veiculo {
     public void atualizar(
             String prefixo,
             String placa,
-            String marca,
             ModeloCarroceria modelo,
             TipoVeiculo tipo,
             Integer ano,
@@ -84,7 +78,6 @@ public class Veiculo {
 
         this.prefixo = prefixo;
         this.placa = placa;
-        this.marca = marca;
         this.modelo = modelo;
         this.tipo = tipo;
         this.ano = ano;

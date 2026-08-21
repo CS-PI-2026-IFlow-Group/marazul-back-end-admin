@@ -1,5 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
+import br.com.marazulturismo.marazulbackendadmin.dto.FrotaEnumsResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.VeiculoRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.VeiculoResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.StatusVeiculo;
@@ -39,6 +40,16 @@ public class FrotaController {
     public ResponseEntity<List<VeiculoResponseDTO>> listar(
             @RequestParam(required = false) StatusVeiculo status) {
         return ResponseEntity.ok(frotaService.listar(status));
+    }
+
+    /**
+     * Catálogo dos valores aceitos em tipo, modelo e status, cada um com o
+     * rótulo de exibição. Declarado antes de /{id} por clareza — o Spring já
+     * prioriza o caminho literal sobre a variável de rota.
+     */
+    @GetMapping("/enums")
+    public ResponseEntity<FrotaEnumsResponseDTO> listarEnums() {
+        return ResponseEntity.ok(frotaService.listarEnums());
     }
 
     @GetMapping("/{id}")

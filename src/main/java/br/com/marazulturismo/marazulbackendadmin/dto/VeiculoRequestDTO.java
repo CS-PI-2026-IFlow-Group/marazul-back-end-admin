@@ -10,10 +10,11 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 
 import java.time.LocalDate;
+import java.util.Locale;
 
 /**
  * Dados de entrada para cadastro/atualização de veículos.
- * prefixo, placa, marca, modelo, tipo, ano e assentos são obrigatórios.
+ * prefixo, placa, modelo, tipo, ano e assentos são obrigatórios.
  * dataVistoria e status são opcionais (status assume ATIVO quando ausente).
  */
 public record VeiculoRequestDTO(
@@ -23,12 +24,9 @@ public record VeiculoRequestDTO(
 
         @NotBlank(message = "A placa é obrigatória.")
         @Pattern(
-                regexp = "^[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}$",
-                message = "A placa deve estar no formato ABC1234 ou ABC1D23.")
+                regexp = "^[A-Za-z]{3}-?[0-9][A-Za-z0-9][0-9]{2}$",
+                message = "A placa deve estar no formato ABC1234, ABC-1234 ou ABC1D23.")
         String placa,
-
-        @NotBlank(message = "A marca é obrigatória.")
-        String marca,
 
         @NotNull(message = "O modelo de carroceria é obrigatório.")
         ModeloCarroceria modelo,
@@ -47,4 +45,21 @@ public record VeiculoRequestDTO(
         LocalDate dataVistoria,
 
         StatusVeiculo status
-) {}
+) {
+
+    /**
+     * A placa chega em formatos livres — com hífen, em caixa baixa, com espaço
+     * sobrando. Aqui ela vira o formato canônico (só letras e dígitos, em caixa
+     * alta) antes de qualquer validação ou comparação de unicidade.
+     */
+    public VeiculoRequestDTO {
+        placa = normalizarPlaca(placa);
+    }
+
+    public static String normalizarPlaca(String placa) {
+        if (placa == null) {
+            return null;
+        }
+        return placa.replaceAll("[\\s-]", "").toUpperCase(Locale.ROOT);
+    }
+}

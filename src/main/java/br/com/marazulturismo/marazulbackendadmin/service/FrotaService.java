@@ -1,5 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
+import br.com.marazulturismo.marazulbackendadmin.dto.FrotaEnumsResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.VeiculoRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.VeiculoResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.StatusVeiculo;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Locale;
 
 @Service
 public class FrotaService {
@@ -39,6 +39,15 @@ public class FrotaService {
                 .toList();
     }
 
+    /**
+     * Catálogo dos valores aceitos nos campos enumerados. Não toca o banco:
+     * é derivado dos próprios ENUMs, então nunca sai de sincronia com o que
+     * a validação aceita.
+     */
+    public FrotaEnumsResponseDTO listarEnums() {
+        return FrotaEnumsResponseDTO.montar();
+    }
+
     @Transactional(readOnly = true)
     public VeiculoResponseDTO buscarPorId(Long id) {
         return VeiculoResponseDTO.fromEntity(buscarEntidade(id));
@@ -55,7 +64,6 @@ public class FrotaService {
         Veiculo veiculo = new Veiculo(
                 dto.prefixo(),
                 placa,
-                dto.marca(),
                 dto.modelo(),
                 dto.tipo(),
                 dto.ano(),
@@ -79,7 +87,6 @@ public class FrotaService {
         veiculo.atualizar(
                 dto.prefixo(),
                 placa,
-                dto.marca(),
                 dto.modelo(),
                 dto.tipo(),
                 dto.ano(),
@@ -115,9 +122,10 @@ public class FrotaService {
 
     /**
      * A unicidade da placa só se sustenta se a comparação for feita sobre um
-     * valor canônico: sem espaços nas bordas e em caixa alta.
+     * valor canônico. O DTO já normaliza na entrada HTTP; repetir aqui mantém
+     * o serviço correto para qualquer chamador, e a regra mora num lugar só.
      */
     private static String normalizarPlaca(String placa) {
-        return placa.trim().toUpperCase(Locale.ROOT);
+        return VeiculoRequestDTO.normalizarPlaca(placa);
     }
 }
