@@ -19,7 +19,7 @@ public class User {
     private Long id;
 
     @Column(nullable = false)
-    private String nome;
+    private String name;
 
     @Column(nullable = false)
     private Date admissionDate;
@@ -36,9 +36,15 @@ public class User {
     private String email;
 
     @Column(name = "senha_hash")
-    private String senhaHash;
+    private String passwordHash;
 
     private Date disabledAt;
+
+    @Column(name = "cellphone_number")
+    private String cellphoneNumber;
+
+    @Embedded
+    private CNH cnh;
 
     @Column(name = "reset_token", unique = true)
     private String resetToken;
@@ -57,22 +63,26 @@ public class User {
     }
 
     public void updateSenhaHash(String senhaHash) {
-        this.senhaHash = senhaHash;
+        this.passwordHash = senhaHash;
     }
 
     public User(
-            String nome,
+            String name,
             Date admissionDate,
             Position position,
             UserRole userRole,
             String email,
-            String senhaHash) {
+            String cellphoneNumber,
+            CNH cnh,
+            String passwordHash) {
 
-        this.nome = nome;
+        this.name = name;
         this.admissionDate = admissionDate;
         this.position = position;
         this.userRole = userRole;
         this.email = email;
-        this.senhaHash = senhaHash;
+        this.cellphoneNumber = cellphoneNumber;
+        this.cnh = cnh;
+        this.passwordHash = passwordHash;
     }
 }
