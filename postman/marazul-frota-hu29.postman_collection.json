@@ -1,0 +1,1390 @@
+{
+  "info": {
+    "name": "Marazul - HU29 Frota",
+    "description": "Cobertura dos criterios de aceitacao da HU29 (Epico 11 - Gestao de Frota).\n\nComo usar:\n1. Suba a aplicacao (mvnw spring-boot:run) com o MySQL 'marazul' no ar.\n2. Importe esta collection no Postman.\n3. Rode pelo Collection Runner, na ordem em que os requests estao.\n\nA collection e re-executavel: a placa e o prefixo sao sorteados a cada rodada,\ne o cadastro de usuario aceita 201 (primeira vez) ou 409 (ja existente).\n\nO token JWT e capturado no login e reaproveitado automaticamente nos demais requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "admin@marazul.com",
+      "type": "string"
+    },
+    {
+      "key": "senha",
+      "value": "senha123",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "veiculoId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "placa",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "placaMinuscula",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "prefixo",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "placaComHifen",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "placaAntiga",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticacao",
+      "item": [
+        {
+          "name": "1.1 Register - cria usuario admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Aceita 201 (novo) ou 409 (ja cadastrado)', function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Admin Postman\",\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\",\n  \"position\": \"DRIVER\",\n  \"userRole\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 Login - captura o token JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Retorna um token JWT nao vazio', function () {",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('token', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"senha\": \"{{senha}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Autenticacao obrigatoria (401)",
+      "item": [
+        {
+          "name": "2.1 GET /api/frota sem token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz mensagem de erro em JSON', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('erro');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 POST /api/frota sem token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"9999\",\n  \"placa\": \"ZZZ9Z99\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"DD\",\n  \"ano\": 2020,\n  \"assentos\": 44\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.3 GET com token adulterado -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer token.adulterado.aqui"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. CRUD e exclusao logica",
+      "item": [
+        {
+          "name": "3.0 GET /api/frota/enums - catalogo dos dropdowns",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const c = pm.response.json();",
+                  "",
+                  "pm.test('Traz as tres listas', function () {",
+                  "    pm.expect(c).to.have.all.keys('tipos', 'modelos', 'status');",
+                  "});",
+                  "",
+                  "pm.test('Quantidade de opcoes por enum', function () {",
+                  "    pm.expect(c.tipos).to.have.lengthOf(3);",
+                  "    pm.expect(c.modelos).to.have.lengthOf(4);",
+                  "    pm.expect(c.status).to.have.lengthOf(3);",
+                  "});",
+                  "",
+                  "pm.test('Cada opcao tem valor e descricao', function () {",
+                  "    [].concat(c.tipos, c.modelos, c.status).forEach(function (o) {",
+                  "        pm.expect(o).to.have.property('valor');",
+                  "        pm.expect(o).to.have.property('descricao');",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test('Carroceria usa MARCOPOLO (typo corrigido)', function () {",
+                  "    const valores = c.modelos.map(function (o) { return o.valor; });",
+                  "    pm.expect(valores).to.include('MARCOPOLO');",
+                  "    pm.expect(valores).to.not.include('MARCOPOLLO');",
+                  "});",
+                  "",
+                  "pm.test('Descricoes legiveis para o dropdown', function () {",
+                  "    const porValor = {};",
+                  "    [].concat(c.tipos, c.modelos, c.status).forEach(function (o) { porValor[o.valor] = o.descricao; });",
+                  "    pm.expect(porValor['IRIZAR_BRASIL']).to.eql('Irizar Brasil');",
+                  "    pm.expect(porValor['CONVENCIONAL']).to.eql('Convencional');",
+                  "    pm.expect(porValor['MARCOPOLO']).to.eql('Marcopolo');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/enums",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "enums"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.0b GET /api/frota/enums sem token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/enums",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "enums"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "3.1 POST cadastra veiculo sem status -> 201 e ATIVO",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Placa e prefixo sorteados para a collection ser re-executavel.",
+                  "const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';",
+                  "const letra = () => LETRAS[Math.floor(Math.random() * LETRAS.length)];",
+                  "const digito = () => String(Math.floor(Math.random() * 10));",
+                  "",
+                  "// Formato Mercosul: AAA0A00",
+                  "const placa = letra() + letra() + letra() + digito() + letra() + digito() + digito();",
+                  "",
+                  "pm.collectionVariables.set('placa', placa);",
+                  "pm.collectionVariables.set('placaMinuscula', placa.toLowerCase());",
+                  "pm.collectionVariables.set('prefixo', String(1000 + Math.floor(Math.random() * 9000)));",
+                  "",
+                  "// Mesma placa escrita com hifen, para provar a normalizacao.",
+                  "pm.collectionVariables.set('placaComHifen', placa.slice(0, 3) + '-' + placa.slice(3));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const v = pm.response.json();",
+                  "",
+                  "pm.test('Status ATIVO atribuido automaticamente quando nao informado', function () {",
+                  "    pm.expect(v.status).to.eql('ATIVO');",
+                  "});",
+                  "",
+                  "pm.test('dataVistoria e opcional e permanece nula', function () {",
+                  "    pm.expect(v.dataVistoria).to.be.null;",
+                  "});",
+                  "",
+                  "pm.test('Placa persistida em caixa alta', function () {",
+                  "    pm.expect(v.placa).to.eql(pm.collectionVariables.get('placa'));",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('veiculoId', v.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"{{prefixo}}\",\n  \"placa\": \"{{placa}}\",\n  \"modelo\": \"MARCOPOLO\",\n  \"tipo\": \"LD\",\n  \"ano\": 2022,\n  \"assentos\": 46\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.2 GET lista com todos os campos preenchidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const lista = pm.response.json();",
+                  "",
+                  "pm.test('Retorna um array', function () {",
+                  "    pm.expect(lista).to.be.an('array');",
+                  "});",
+                  "",
+                  "const id = Number(pm.collectionVariables.get('veiculoId'));",
+                  "const veiculo = lista.find(function (x) { return x.id === id; });",
+                  "",
+                  "pm.test('Contem o veiculo cadastrado', function () {",
+                  "    pm.expect(veiculo, 'veiculo criado nesta rodada').to.not.be.undefined;",
+                  "});",
+                  "",
+                  "pm.test('Todos os campos obrigatorios vem preenchidos', function () {",
+                  "    ['id', 'prefixo', 'placa', 'modelo', 'tipo', 'ano', 'assentos', 'status']",
+                  "        .forEach(function (campo) {",
+                  "            pm.expect(veiculo, 'campo ' + campo).to.have.property(campo);",
+                  "            pm.expect(veiculo[campo], 'campo ' + campo).to.not.be.null;",
+                  "        });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.3 GET por id -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna o veiculo pedido', function () {",
+                  "    const v = pm.response.json();",
+                  "    pm.expect(v.id).to.eql(Number(pm.collectionVariables.get('veiculoId')));",
+                  "    pm.expect(v.placa).to.eql(pm.collectionVariables.get('placa'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/{{veiculoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "{{veiculoId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.4 GET ?status=ATIVO contem o veiculo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const id = Number(pm.collectionVariables.get('veiculoId'));",
+                  "const lista = pm.response.json();",
+                  "",
+                  "pm.test('Veiculo ativo aparece na selecao de novas viagens', function () {",
+                  "    pm.expect(lista.some(function (x) { return x.id === id; })).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Filtro devolve apenas ATIVO', function () {",
+                  "    lista.forEach(function (x) { pm.expect(x.status).to.eql('ATIVO'); });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota?status=ATIVO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ATIVO"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.5 PUT atualiza para EM_MANUTENCAO -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const v = pm.response.json();",
+                  "",
+                  "pm.test('Status alterado para EM_MANUTENCAO', function () {",
+                  "    pm.expect(v.status).to.eql('EM_MANUTENCAO');",
+                  "});",
+                  "",
+                  "pm.test('dataVistoria gravada', function () {",
+                  "    pm.expect(v.dataVistoria).to.eql('2026-07-01');",
+                  "});",
+                  "",
+                  "pm.test('assentos atualizado', function () {",
+                  "    pm.expect(v.assentos).to.eql(42);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"{{prefixo}}\",\n  \"placa\": \"{{placa}}\",\n  \"modelo\": \"MARCOPOLO\",\n  \"tipo\": \"LD\",\n  \"ano\": 2022,\n  \"assentos\": 42,\n  \"dataVistoria\": \"2026-07-01\",\n  \"status\": \"EM_MANUTENCAO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/{{veiculoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "{{veiculoId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.6 DELETE -> 204 (exclusao logica)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/{{veiculoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "{{veiculoId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.7 GET por id apos DELETE -> registro preservado como INATIVO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK - o registro continua consultavel', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const v = pm.response.json();",
+                  "",
+                  "pm.test('Status virou INATIVO em vez de exclusao fisica', function () {",
+                  "    pm.expect(v.status).to.eql('INATIVO');",
+                  "});",
+                  "",
+                  "pm.test('Historico preservado - dados do veiculo intactos', function () {",
+                  "    pm.expect(v.placa).to.eql(pm.collectionVariables.get('placa'));",
+                  "    pm.expect(v.prefixo).to.eql(pm.collectionVariables.get('prefixo'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/{{veiculoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "{{veiculoId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.8 GET ?status=ATIVO apos DELETE -> fora da selecao",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const id = Number(pm.collectionVariables.get('veiculoId'));",
+                  "const lista = pm.response.json();",
+                  "",
+                  "pm.test('Veiculo inativado saiu da selecao de novas viagens', function () {",
+                  "    pm.expect(lista.some(function (x) { return x.id === id; })).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota?status=ATIVO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ATIVO"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.9 POST placa com hifen -> 201 e placa normalizada",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Placa no formato antigo, em caixa baixa e com hifen: aaa-1234",
+                  "const LETRAS = 'abcdefghijklmnopqrstuvwxyz';",
+                  "const letra = () => LETRAS[Math.floor(Math.random() * LETRAS.length)];",
+                  "const digito = () => String(Math.floor(Math.random() * 10));",
+                  "const placaAntiga = letra() + letra() + letra() + '-' + digito() + digito() + digito() + digito();",
+                  "pm.collectionVariables.set('placaAntiga', placaAntiga);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Hifen removido e placa em caixa alta', function () {",
+                  "    const esperada = pm.collectionVariables.get('placaAntiga').replace('-', '').toUpperCase();",
+                  "    pm.expect(pm.response.json().placa).to.eql(esperada);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"{{prefixo}}9\",\n  \"placa\": \"{{placaAntiga}}\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"CONVENCIONAL\",\n  \"ano\": 2020,\n  \"assentos\": 44\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Validacoes e erros",
+      "item": [
+        {
+          "name": "4.1 POST incompleto -> 400 com erro por campo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "const erros = pm.response.json();",
+                  "",
+                  "pm.test('Aponta cada campo obrigatorio ausente', function () {",
+                  "    ['prefixo', 'modelo', 'tipo', 'ano', 'assentos']",
+                  "        .forEach(function (campo) {",
+                  "            pm.expect(erros, 'campo ' + campo).to.have.property(campo);",
+                  "        });",
+                  "});",
+                  "",
+                  "pm.test('dataVistoria e status nao sao cobrados', function () {",
+                  "    pm.expect(erros).to.not.have.property('dataVistoria');",
+                  "    pm.expect(erros).to.not.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"XYZ9K88\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.2 POST tipo fora do ENUM -> 400 listando valores aceitos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "const erro = pm.response.json().erro;",
+                  "",
+                  "pm.test('Mensagem identifica o campo tipo', function () {",
+                  "    pm.expect(erro).to.include('tipo');",
+                  "});",
+                  "",
+                  "pm.test('Mensagem lista os valores aceitos do ENUM', function () {",
+                  "    pm.expect(erro).to.include('DD');",
+                  "    pm.expect(erro).to.include('LD');",
+                  "    pm.expect(erro).to.include('CONVENCIONAL');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5001\",\n  \"placa\": \"XYZ9K88\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"SEMI_LEITO\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.3 POST modelo de carroceria invalido -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Mensagem lista as carrocerias aceitas', function () {",
+                  "    const erro = pm.response.json().erro;",
+                  "    pm.expect(erro).to.include('MARCOPOLO');",
+                  "    pm.expect(erro).to.include('COMIL');",
+                  "    pm.expect(erro).to.include('IRIZAR_BRASIL');",
+                  "    pm.expect(erro).to.include('BUSSCAR');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5002\",\n  \"placa\": \"XYZ9K88\",\n  \"modelo\": \"NEOBUS\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.4 POST placa em formato invalido -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Erro aponta o campo placa', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('placa');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5003\",\n  \"placa\": \"12345\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.5 POST ano ausente -> 400 (campo obrigatorio)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Erro aponta o campo ano', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('ano');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5004\",\n  \"placa\": \"XYZ9K88\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"DD\",\n  \"assentos\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.6 POST placa duplicada -> 409 Conflict",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Mensagem descritiva citando a placa', function () {",
+                  "    const erro = pm.response.json().erro;",
+                  "    pm.expect(erro).to.include(pm.collectionVariables.get('placa'));",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5005\",\n  \"placa\": \"{{placa}}\",\n  \"modelo\": \"BUSSCAR\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.7 POST mesma placa em caixa baixa -> 409 Conflict",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 - normalizacao impede duplicata por caixa', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5006\",\n  \"placa\": \"{{placaMinuscula}}\",\n  \"modelo\": \"BUSSCAR\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.8 GET ?status invalido -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Mensagem lista os status aceitos', function () {",
+                  "    const erro = pm.response.json().erro;",
+                  "    pm.expect(erro).to.include('ATIVO');",
+                  "    pm.expect(erro).to.include('INATIVO');",
+                  "    pm.expect(erro).to.include('EM_MANUTENCAO');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota?status=SUCATEADO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "SUCATEADO"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.9 GET id inexistente -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Mensagem de erro presente', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('erro');",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.10 DELETE id inexistente -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b).to.have.property('message');",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.11 POST mesma placa escrita com hifen -> 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 - hifen nao burla a unicidade', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.message).to.eql(b.erro);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/frota",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "frota"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prefixo\": \"5007\",\n  \"placa\": \"{{placaComHifen}}\",\n  \"modelo\": \"BUSSCAR\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
