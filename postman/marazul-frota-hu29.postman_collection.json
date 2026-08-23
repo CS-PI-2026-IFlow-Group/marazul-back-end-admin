@@ -245,7 +245,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"9999\",\n  \"placa\": \"ZZZ9Z99\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"DD\",\n  \"ano\": 2020,\n  \"assentos\": 44\n}"
+              "raw": "{\n  \"prefix\": \"9999\",\n  \"licensePlate\": \"ZZZ9Z99\",\n  \"model\": \"COMIL\",\n  \"type\": \"DD\",\n  \"year\": 2020,\n  \"seats\": 44\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -323,33 +323,33 @@
                   "const c = pm.response.json();",
                   "",
                   "pm.test('Traz as tres listas', function () {",
-                  "    pm.expect(c).to.have.all.keys('tipos', 'modelos', 'status');",
+                  "    pm.expect(c).to.have.all.keys('types', 'models', 'statuses');",
                   "});",
                   "",
                   "pm.test('Quantidade de opcoes por enum', function () {",
-                  "    pm.expect(c.tipos).to.have.lengthOf(3);",
-                  "    pm.expect(c.modelos).to.have.lengthOf(4);",
-                  "    pm.expect(c.status).to.have.lengthOf(3);",
+                  "    pm.expect(c.types).to.have.lengthOf(3);",
+                  "    pm.expect(c.models).to.have.lengthOf(4);",
+                  "    pm.expect(c.statuses).to.have.lengthOf(3);",
                   "});",
                   "",
-                  "pm.test('Cada opcao tem valor e descricao', function () {",
-                  "    [].concat(c.tipos, c.modelos, c.status).forEach(function (o) {",
-                  "        pm.expect(o).to.have.property('valor');",
-                  "        pm.expect(o).to.have.property('descricao');",
+                  "pm.test('Cada opcao tem value e label', function () {",
+                  "    [].concat(c.types, c.models, c.statuses).forEach(function (o) {",
+                  "        pm.expect(o).to.have.property('value');",
+                  "        pm.expect(o).to.have.property('label');",
                   "    });",
                   "});",
                   "",
                   "pm.test('Carroceria usa MARCOPOLO (typo corrigido)', function () {",
-                  "    const valores = c.modelos.map(function (o) { return o.valor; });",
+                  "    const valores = c.models.map(function (o) { return o.value; });",
                   "    pm.expect(valores).to.include('MARCOPOLO');",
                   "    pm.expect(valores).to.not.include('MARCOPOLLO');",
                   "});",
                   "",
                   "pm.test('Descricoes legiveis para o dropdown', function () {",
                   "    const porValor = {};",
-                  "    [].concat(c.tipos, c.modelos, c.status).forEach(function (o) { porValor[o.valor] = o.descricao; });",
+                  "    [].concat(c.types, c.models, c.statuses).forEach(function (o) { porValor[o.value] = o.label; });",
                   "    pm.expect(porValor['IRIZAR_BRASIL']).to.eql('Irizar Brasil');",
-                  "    pm.expect(porValor['CONVENCIONAL']).to.eql('Convencional');",
+                  "    pm.expect(porValor['CONVENTIONAL']).to.eql('Convencional');",
                   "    pm.expect(porValor['MARCOPOLO']).to.eql('Marcopolo');",
                   "});"
                 ]
@@ -407,26 +407,23 @@
           }
         },
         {
-          "name": "3.1 POST cadastra veiculo sem status -> 201 e ATIVO",
+          "name": "3.1 POST cadastra veiculo sem status -> 201 e ACTIVE",
           "event": [
             {
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Placa e prefixo sorteados para a collection ser re-executavel.",
                   "const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';",
                   "const letra = () => LETRAS[Math.floor(Math.random() * LETRAS.length)];",
                   "const digito = () => String(Math.floor(Math.random() * 10));",
                   "",
-                  "// Formato Mercosul: AAA0A00",
                   "const placa = letra() + letra() + letra() + digito() + letra() + digito() + digito();",
                   "",
                   "pm.collectionVariables.set('placa', placa);",
                   "pm.collectionVariables.set('placaMinuscula', placa.toLowerCase());",
                   "pm.collectionVariables.set('prefixo', String(1000 + Math.floor(Math.random() * 9000)));",
                   "",
-                  "// Mesma placa escrita com hifen, para provar a normalizacao.",
                   "pm.collectionVariables.set('placaComHifen', placa.slice(0, 3) + '-' + placa.slice(3));"
                 ]
               }
@@ -442,8 +439,8 @@
                   "",
                   "const v = pm.response.json();",
                   "",
-                  "pm.test('Status ATIVO atribuido automaticamente quando nao informado', function () {",
-                  "    pm.expect(v.status).to.eql('ATIVO');",
+                  "pm.test('Status ACTIVE atribuido automaticamente quando nao informado', function () {",
+                  "    pm.expect(v.status).to.eql('ACTIVE');",
                   "});",
                   "",
                   "pm.test('dataVistoria e opcional e permanece nula', function () {",
@@ -451,7 +448,7 @@
                   "});",
                   "",
                   "pm.test('Placa persistida em caixa alta', function () {",
-                  "    pm.expect(v.placa).to.eql(pm.collectionVariables.get('placa'));",
+                  "    pm.expect(v.licensePlate).to.eql(pm.collectionVariables.get('placa'));",
                   "});",
                   "",
                   "pm.collectionVariables.set('veiculoId', v.id);"
@@ -469,7 +466,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"{{prefixo}}\",\n  \"placa\": \"{{placa}}\",\n  \"modelo\": \"MARCOPOLO\",\n  \"tipo\": \"LD\",\n  \"ano\": 2022,\n  \"assentos\": 46\n}"
+              "raw": "{\n  \"prefix\": \"{{prefixo}}\",\n  \"licensePlate\": \"{{placa}}\",\n  \"model\": \"MARCOPOLO\",\n  \"type\": \"LD\",\n  \"year\": 2022,\n  \"seats\": 46\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -509,7 +506,7 @@
                   "});",
                   "",
                   "pm.test('Todos os campos obrigatorios vem preenchidos', function () {",
-                  "    ['id', 'prefixo', 'placa', 'modelo', 'tipo', 'ano', 'assentos', 'status']",
+                  "    ['id', 'prefix', 'licensePlate', 'model', 'type', 'year', 'seats', 'status']",
                   "        .forEach(function (campo) {",
                   "            pm.expect(veiculo, 'campo ' + campo).to.have.property(campo);",
                   "            pm.expect(veiculo[campo], 'campo ' + campo).to.not.be.null;",
@@ -549,7 +546,7 @@
                   "pm.test('Retorna o veiculo pedido', function () {",
                   "    const v = pm.response.json();",
                   "    pm.expect(v.id).to.eql(Number(pm.collectionVariables.get('veiculoId')));",
-                  "    pm.expect(v.placa).to.eql(pm.collectionVariables.get('placa'));",
+                  "    pm.expect(v.licensePlate).to.eql(pm.collectionVariables.get('placa'));",
                   "});"
                 ]
               }
@@ -572,7 +569,7 @@
           }
         },
         {
-          "name": "3.4 GET ?status=ATIVO contem o veiculo",
+          "name": "3.4 GET ?status=ACTIVE contem o veiculo",
           "event": [
             {
               "listen": "test",
@@ -590,8 +587,8 @@
                   "    pm.expect(lista.some(function (x) { return x.id === id; })).to.be.true;",
                   "});",
                   "",
-                  "pm.test('Filtro devolve apenas ATIVO', function () {",
-                  "    lista.forEach(function (x) { pm.expect(x.status).to.eql('ATIVO'); });",
+                  "pm.test('Filtro devolve apenas ACTIVE', function () {",
+                  "    lista.forEach(function (x) { pm.expect(x.status).to.eql('ACTIVE'); });",
                   "});"
                 ]
               }
@@ -601,7 +598,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/frota?status=ATIVO",
+              "raw": "{{baseUrl}}/api/frota?status=ACTIVE",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -612,14 +609,14 @@
               "query": [
                 {
                   "key": "status",
-                  "value": "ATIVO"
+                  "value": "ACTIVE"
                 }
               ]
             }
           }
         },
         {
-          "name": "3.5 PUT atualiza para EM_MANUTENCAO -> 200",
+          "name": "3.5 PUT atualiza para UNDER_MAINTENANCE -> 200",
           "event": [
             {
               "listen": "test",
@@ -632,8 +629,8 @@
                   "",
                   "const v = pm.response.json();",
                   "",
-                  "pm.test('Status alterado para EM_MANUTENCAO', function () {",
-                  "    pm.expect(v.status).to.eql('EM_MANUTENCAO');",
+                  "pm.test('Status alterado para UNDER_MAINTENANCE', function () {",
+                  "    pm.expect(v.status).to.eql('UNDER_MAINTENANCE');",
                   "});",
                   "",
                   "pm.test('dataVistoria gravada', function () {",
@@ -657,7 +654,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"{{prefixo}}\",\n  \"placa\": \"{{placa}}\",\n  \"modelo\": \"MARCOPOLO\",\n  \"tipo\": \"LD\",\n  \"ano\": 2022,\n  \"assentos\": 42,\n  \"dataVistoria\": \"2026-07-01\",\n  \"status\": \"EM_MANUTENCAO\"\n}"
+              "raw": "{\n  \"prefix\": \"{{prefixo}}\",\n  \"licensePlate\": \"{{placa}}\",\n  \"model\": \"MARCOPOLO\",\n  \"type\": \"LD\",\n  \"year\": 2022,\n  \"seats\": 42,\n  \"inspectionDate\": \"2026-07-01\",\n  \"status\": \"UNDER_MAINTENANCE\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota/{{veiculoId}}",
@@ -704,7 +701,7 @@
           }
         },
         {
-          "name": "3.7 GET por id apos DELETE -> registro preservado como INATIVO",
+          "name": "3.7 GET por id apos DELETE -> registro preservado como INACTIVE",
           "event": [
             {
               "listen": "test",
@@ -717,13 +714,13 @@
                   "",
                   "const v = pm.response.json();",
                   "",
-                  "pm.test('Status virou INATIVO em vez de exclusao fisica', function () {",
-                  "    pm.expect(v.status).to.eql('INATIVO');",
+                  "pm.test('Status virou INACTIVE em vez de exclusao fisica', function () {",
+                  "    pm.expect(v.status).to.eql('INACTIVE');",
                   "});",
                   "",
                   "pm.test('Historico preservado - dados do veiculo intactos', function () {",
-                  "    pm.expect(v.placa).to.eql(pm.collectionVariables.get('placa'));",
-                  "    pm.expect(v.prefixo).to.eql(pm.collectionVariables.get('prefixo'));",
+                  "    pm.expect(v.licensePlate).to.eql(pm.collectionVariables.get('placa'));",
+                  "    pm.expect(v.prefix).to.eql(pm.collectionVariables.get('prefixo'));",
                   "});"
                 ]
               }
@@ -746,7 +743,7 @@
           }
         },
         {
-          "name": "3.8 GET ?status=ATIVO apos DELETE -> fora da selecao",
+          "name": "3.8 GET ?status=ACTIVE apos DELETE -> fora da selecao",
           "event": [
             {
               "listen": "test",
@@ -771,7 +768,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/frota?status=ATIVO",
+              "raw": "{{baseUrl}}/api/frota?status=ACTIVE",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -782,7 +779,7 @@
               "query": [
                 {
                   "key": "status",
-                  "value": "ATIVO"
+                  "value": "ACTIVE"
                 }
               ]
             }
@@ -796,7 +793,6 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Placa no formato antigo, em caixa baixa e com hifen: aaa-1234",
                   "const LETRAS = 'abcdefghijklmnopqrstuvwxyz';",
                   "const letra = () => LETRAS[Math.floor(Math.random() * LETRAS.length)];",
                   "const digito = () => String(Math.floor(Math.random() * 10));",
@@ -816,7 +812,7 @@
                   "",
                   "pm.test('Hifen removido e placa em caixa alta', function () {",
                   "    const esperada = pm.collectionVariables.get('placaAntiga').replace('-', '').toUpperCase();",
-                  "    pm.expect(pm.response.json().placa).to.eql(esperada);",
+                  "    pm.expect(pm.response.json().licensePlate).to.eql(esperada);",
                   "});"
                 ]
               }
@@ -842,7 +838,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"{{prefixo}}9\",\n  \"placa\": \"{{placaAntiga}}\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"CONVENCIONAL\",\n  \"ano\": 2020,\n  \"assentos\": 44\n}"
+              "raw": "{\n  \"prefix\": \"{{prefixo}}9\",\n  \"licensePlate\": \"{{placaAntiga}}\",\n  \"model\": \"COMIL\",\n  \"type\": \"CONVENTIONAL\",\n  \"year\": 2020,\n  \"seats\": 44\n}"
             }
           }
         }
@@ -896,7 +892,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"placa\": \"XYZ9K88\"\n}"
+              "raw": "{\n  \"licensePlate\": \"XYZ9K88\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -931,7 +927,7 @@
                   "pm.test('Mensagem lista os valores aceitos do ENUM', function () {",
                   "    pm.expect(erro).to.include('DD');",
                   "    pm.expect(erro).to.include('LD');",
-                  "    pm.expect(erro).to.include('CONVENCIONAL');",
+                  "    pm.expect(erro).to.include('CONVENTIONAL');",
                   "});",
                   "",
                   "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
@@ -953,7 +949,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5001\",\n  \"placa\": \"XYZ9K88\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"SEMI_LEITO\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5001\",\n  \"licensePlate\": \"XYZ9K88\",\n  \"model\": \"COMIL\",\n  \"type\": \"SEMI_LEITO\",\n  \"year\": 2021,\n  \"seats\": 50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -1006,7 +1002,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5002\",\n  \"placa\": \"XYZ9K88\",\n  \"modelo\": \"NEOBUS\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5002\",\n  \"licensePlate\": \"XYZ9K88\",\n  \"model\": \"NEOBUS\",\n  \"type\": \"DD\",\n  \"year\": 2021,\n  \"seats\": 50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -1033,7 +1029,7 @@
                   "});",
                   "",
                   "pm.test('Erro aponta o campo placa', function () {",
-                  "    pm.expect(pm.response.json()).to.have.property('placa');",
+                  "    pm.expect(pm.response.json()).to.have.property('licensePlate');",
                   "});",
                   "",
                   "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
@@ -1055,7 +1051,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5003\",\n  \"placa\": \"12345\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5003\",\n  \"licensePlate\": \"12345\",\n  \"model\": \"COMIL\",\n  \"type\": \"DD\",\n  \"year\": 2021,\n  \"seats\": 50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -1104,7 +1100,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5004\",\n  \"placa\": \"XYZ9K88\",\n  \"modelo\": \"COMIL\",\n  \"tipo\": \"DD\",\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5004\",\n  \"licensePlate\": \"XYZ9K88\",\n  \"model\": \"COMIL\",\n  \"type\": \"DD\",\n  \"seats\": 50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -1154,7 +1150,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5005\",\n  \"placa\": \"{{placa}}\",\n  \"modelo\": \"BUSSCAR\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5005\",\n  \"licensePlate\": \"{{placa}}\",\n  \"model\": \"BUSSCAR\",\n  \"type\": \"DD\",\n  \"year\": 2021,\n  \"seats\": 50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -1199,7 +1195,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5006\",\n  \"placa\": \"{{placaMinuscula}}\",\n  \"modelo\": \"BUSSCAR\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5006\",\n  \"licensePlate\": \"{{placaMinuscula}}\",\n  \"model\": \"BUSSCAR\",\n  \"type\": \"DD\",\n  \"year\": 2021,\n  \"seats\": 50\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/frota",
@@ -1227,9 +1223,9 @@
                   "",
                   "pm.test('Mensagem lista os status aceitos', function () {",
                   "    const erro = pm.response.json().erro;",
-                  "    pm.expect(erro).to.include('ATIVO');",
-                  "    pm.expect(erro).to.include('INATIVO');",
-                  "    pm.expect(erro).to.include('EM_MANUTENCAO');",
+                  "    pm.expect(erro).to.include('ACTIVE');",
+                  "    pm.expect(erro).to.include('INACTIVE');",
+                  "    pm.expect(erro).to.include('UNDER_MAINTENANCE');",
                   "});",
                   "",
                   "pm.test('Corpo traz message com o mesmo conteudo de erro', function () {",
@@ -1380,7 +1376,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prefixo\": \"5007\",\n  \"placa\": \"{{placaComHifen}}\",\n  \"modelo\": \"BUSSCAR\",\n  \"tipo\": \"DD\",\n  \"ano\": 2021,\n  \"assentos\": 50\n}"
+              "raw": "{\n  \"prefix\": \"5007\",\n  \"licensePlate\": \"{{placaComHifen}}\",\n  \"model\": \"BUSSCAR\",\n  \"type\": \"DD\",\n  \"year\": 2021,\n  \"seats\": 50\n}"
             }
           }
         }

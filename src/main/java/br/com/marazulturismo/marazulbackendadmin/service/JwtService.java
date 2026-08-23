@@ -35,10 +35,6 @@ public class JwtService {
                 .compact();
     }
 
-    /**
-     * Valida a assinatura e a expiração do token e retorna as claims.
-     * Lança {@link JwtException} quando o token é inválido ou expirado.
-     */
     public Claims parseToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
