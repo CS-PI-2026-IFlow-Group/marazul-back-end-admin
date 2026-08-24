@@ -1,7 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.exception;
 
-public class VeiculoNotFoundException extends RuntimeException {
-    public VeiculoNotFoundException(Long id) {
+public class VehicleNotFoundException extends RuntimeException {
+    public VehicleNotFoundException(Long id) {
         super("Veículo não encontrado: " + id);
     }
 }

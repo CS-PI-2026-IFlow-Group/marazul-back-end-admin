@@ -39,10 +39,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Retorna 401 com corpo JSON para requisições sem credencial válida,
-     * em vez do redirecionamento/403 padrão.
-     */
     @Bean
     public AuthenticationEntryPoint unauthorizedEntryPoint() {
         return (request, response, authException) -> {

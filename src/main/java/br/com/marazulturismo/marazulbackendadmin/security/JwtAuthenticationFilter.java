@@ -17,11 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Valida o JWT presente no cabeçalho Authorization (Bearer) e popula o
- * SecurityContext. Requisições sem token válido seguem sem autenticação e
- * são barradas com 401 pela configuração de segurança.
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
