@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -52,13 +52,13 @@ public class AuthController {
         ));
     }
 
-    @PostMapping("/forgot-password")
+    @PostMapping("/recuperar-senha")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody @Valid ForgotPasswordRequestDTO dto) {
         passwordResetService.forgotPassword(dto.email());
         return ResponseEntity.ok(Map.of("mensagem", "Se o e-mail estiver cadastrado, você receberá as instruções de recuperação."));
     }
 
-    @PostMapping("/reset-password")
+    @PostMapping("/redefinir-senha")
     public ResponseEntity<Map<String, String>> resetPassword(@RequestBody @Valid ResetPasswordRequestDTO dto) {
         passwordResetService.resetPassword(dto.token(), dto.novaSenha());
         return ResponseEntity.ok(Map.of("mensagem", "Senha redefinida com sucesso."));
