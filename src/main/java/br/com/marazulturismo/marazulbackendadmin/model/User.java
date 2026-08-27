@@ -66,6 +66,22 @@ public class User {
         this.passwordHash = senhaHash;
     }
 
+    public void atualizar(String name, String email, String cellphoneNumber, Position position, CNH cnh) {
+        this.name = name;
+        this.email = email;
+        this.cellphoneNumber = cellphoneNumber;
+        this.position = position;
+        this.cnh = cnh;
+    }
+
+    public void inativar() {
+        this.disabledAt = new Date();
+    }
+
+    public boolean isInativo() {
+        return disabledAt != null;
+    }
+
     public User(
             String name,
             Date admissionDate,

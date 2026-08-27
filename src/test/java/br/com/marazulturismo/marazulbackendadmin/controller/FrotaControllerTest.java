@@ -71,6 +71,8 @@ class FrotaControllerTest {
                 Position.DRIVER,
                 UserRole.ADMIN,
                 "admin@marazul.test",
+                null,
+                null,
                 "hash-irrelevante"));
 
         token = "Bearer " + jwtService.generateToken(admin);

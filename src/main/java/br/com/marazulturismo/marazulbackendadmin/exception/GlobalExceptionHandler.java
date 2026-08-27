@@ -63,6 +63,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(corpo(ex.getMessage()));
     }
 
+    @ExceptionHandler(FuncionarioNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleFuncionarioNotFound(FuncionarioNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(corpo(ex.getMessage()));
+    }
+
+    @ExceptionHandler(FuncionarioValidationException.class)
+    public ResponseEntity<Map<String, String>> handleFuncionarioValidation(FuncionarioValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo(ex.getMessage()));
+    }
+
     /**
      * Corpo da requisição malformado ou valor de ENUM inválido (ex.: tipo/modelo/status
      * fora dos valores permitidos). Retorna 400 com mensagem clara e objetiva.
