@@ -4,7 +4,7 @@ import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
-import br.com.marazulturismo.marazulbackendadmin.repository.VeiculoRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,15 +26,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Cobre os critérios de aceitação da HU29 ponta a ponta: autenticação
- * obrigatória, campos obrigatórios, validação de ENUM, placa duplicada e
- * exclusão lógica.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class FrotaControllerTest {
+class FleetControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -46,24 +41,24 @@ class FrotaControllerTest {
     private UserRepository userRepository;
 
     @Autowired
-    private VeiculoRepository veiculoRepository;
+    private VehicleRepository vehicleRepository;
 
     private String token;
 
-    private static final String VEICULO_VALIDO = """
+    private static final String VALID_VEHICLE = """
             {
-              "prefixo": "1001",
-              "placa": "ABC1D23",
-              "modelo": "MARCOPOLO",
-              "tipo": "LD",
-              "ano": 2022,
-              "assentos": 46
+              "prefix": "1001",
+              "licensePlate": "ABC1D23",
+              "model": "MARCOPOLO",
+              "type": "LD",
+              "year": 2022,
+              "seats": 46
             }
             """;
 
     @BeforeEach
     void setUp() {
-        veiculoRepository.deleteAll();
+        vehicleRepository.deleteAll();
 
         User admin = userRepository.save(new User(
                 "Admin Teste",
@@ -79,254 +74,250 @@ class FrotaControllerTest {
     }
 
     @Test
-    void listar_semToken_retorna401() throws Exception {
+    void list_withoutToken_returns401() throws Exception {
         mockMvc.perform(get("/api/frota"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.erro").exists());
     }
 
     @Test
-    void cadastrar_semToken_retorna401() throws Exception {
+    void create_withoutToken_returns401() throws Exception {
         mockMvc.perform(post("/api/frota")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(VEICULO_VALIDO))
+                        .content(VALID_VEHICLE))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void listar_retornaVeiculoComTodosOsCamposPreenchidos() throws Exception {
-        cadastrarVeiculoValido();
+    void list_returnsVehicleWithAllFieldsPopulated() throws Exception {
+        createValidVehicle();
 
         mockMvc.perform(get("/api/frota").header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id").exists())
-                .andExpect(jsonPath("$[0].prefixo").value("1001"))
-                .andExpect(jsonPath("$[0].placa").value("ABC1D23"))
-                .andExpect(jsonPath("$[0].modelo").value("MARCOPOLO"))
-                .andExpect(jsonPath("$[0].tipo").value("LD"))
-                .andExpect(jsonPath("$[0].ano").value(2022))
-                .andExpect(jsonPath("$[0].assentos").value(46))
-                .andExpect(jsonPath("$[0].status").value("ATIVO"));
+                .andExpect(jsonPath("$[0].prefix").value("1001"))
+                .andExpect(jsonPath("$[0].licensePlate").value("ABC1D23"))
+                .andExpect(jsonPath("$[0].model").value("MARCOPOLO"))
+                .andExpect(jsonPath("$[0].type").value("LD"))
+                .andExpect(jsonPath("$[0].year").value(2022))
+                .andExpect(jsonPath("$[0].seats").value(46))
+                .andExpect(jsonPath("$[0].status").value("ACTIVE"));
     }
 
     @Test
-    void cadastrar_semStatus_atribuiAtivo() throws Exception {
+    void create_withoutStatus_assignsActive() throws Exception {
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(VEICULO_VALIDO))
+                        .content(VALID_VEHICLE))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("ATIVO"))
-                .andExpect(jsonPath("$.dataVistoria").doesNotExist());
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.inspectionDate").doesNotExist());
     }
 
     @Test
-    void cadastrar_incompleto_retorna400ComMensagemPorCampo() throws Exception {
-        String semObrigatorios = """
+    void create_incomplete_returns400WithMessagePerField() throws Exception {
+        String missingRequiredFields = """
                 {
-                  "placa": "ABC1D23"
+                  "licensePlate": "ABC1D23"
                 }
                 """;
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(semObrigatorios))
+                        .content(missingRequiredFields))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.prefixo").exists())
-                .andExpect(jsonPath("$.modelo").exists())
-                .andExpect(jsonPath("$.tipo").exists())
-                .andExpect(jsonPath("$.ano").exists())
-                .andExpect(jsonPath("$.assentos").exists());
+                .andExpect(jsonPath("$.prefix").exists())
+                .andExpect(jsonPath("$.model").exists())
+                .andExpect(jsonPath("$.type").exists())
+                .andExpect(jsonPath("$.year").exists())
+                .andExpect(jsonPath("$.seats").exists());
     }
 
     @Test
-    void cadastrar_tipoForaDoEnum_retorna400CitandoValoresAceitos() throws Exception {
-        String tipoInvalido = VEICULO_VALIDO.replace("\"LD\"", "\"SEMI_LEITO\"");
+    void create_typeOutsideEnum_returns400ListingAcceptedValues() throws Exception {
+        String invalidType = VALID_VEHICLE.replace("\"LD\"", "\"SEMI_LEITO\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(tipoInvalido))
+                        .content(invalidType))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.erro").value(containsString("tipo")))
-                .andExpect(jsonPath("$.erro").value(containsString("CONVENCIONAL")));
+                .andExpect(jsonPath("$.erro").value(containsString("type")))
+                .andExpect(jsonPath("$.erro").value(containsString("CONVENTIONAL")));
     }
 
     @Test
-    void cadastrar_placaDuplicada_retorna409() throws Exception {
-        cadastrarVeiculoValido();
+    void create_duplicateLicensePlate_returns409() throws Exception {
+        createValidVehicle();
 
-        String outroPrefixo = VEICULO_VALIDO.replace("\"1001\"", "\"1002\"");
+        String otherPrefix = VALID_VEHICLE.replace("\"1001\"", "\"1002\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(outroPrefixo))
+                        .content(otherPrefix))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.erro").value(containsString("ABC1D23")));
     }
 
     @Test
-    void cadastrar_placaDuplicadaEmCaixaBaixa_retorna409() throws Exception {
-        cadastrarVeiculoValido();
+    void create_duplicateLicensePlateInLowerCase_returns409() throws Exception {
+        createValidVehicle();
 
-        String mesmaPlacaMinuscula = VEICULO_VALIDO.replace("\"ABC1D23\"", "\"abc1d23\"");
+        String sameLicensePlateInLowerCase = VALID_VEHICLE.replace("\"ABC1D23\"", "\"abc1d23\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mesmaPlacaMinuscula))
+                        .content(sameLicensePlateInLowerCase))
                 .andExpect(status().isConflict());
     }
 
     @Test
-    void cadastrar_placaComHifen_normalizaEAceita() throws Exception {
-        String comHifen = VEICULO_VALIDO.replace("\"ABC1D23\"", "\"abc-1234\"");
+    void create_licensePlateWithHyphen_normalizesAndAccepts() throws Exception {
+        String withHyphen = VALID_VEHICLE.replace("\"ABC1D23\"", "\"abc-1234\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(comHifen))
+                        .content(withHyphen))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.placa").value("ABC1234"));
+                .andExpect(jsonPath("$.licensePlate").value("ABC1234"));
     }
 
     @Test
-    void cadastrar_placaComHifenDuplicandoExistente_retorna409() throws Exception {
-        cadastrarVeiculoValido();
+    void create_licensePlateWithHyphenDuplicatingExisting_returns409() throws Exception {
+        createValidVehicle();
 
-        // ABC1D23 ja cadastrada; "abc-1d23" e a mesma placa em outro formato.
-        String mesmaPlacaComHifen = VEICULO_VALIDO.replace("\"ABC1D23\"", "\"abc-1d23\"");
+        String sameLicensePlateWithHyphen = VALID_VEHICLE.replace("\"ABC1D23\"", "\"abc-1d23\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mesmaPlacaComHifen))
+                        .content(sameLicensePlateWithHyphen))
                 .andExpect(status().isConflict());
     }
 
     @Test
-    void listarEnums_retornaCatalogoCompletoComDescricoes() throws Exception {
+    void listEnums_returnsFullCatalogWithLabels() throws Exception {
         mockMvc.perform(get("/api/frota/enums").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.tipos", hasSize(3)))
-                .andExpect(jsonPath("$.modelos", hasSize(4)))
-                .andExpect(jsonPath("$.status", hasSize(3)))
-                .andExpect(jsonPath("$.tipos[?(@.valor=='CONVENCIONAL')].descricao").value("Convencional"))
-                .andExpect(jsonPath("$.modelos[?(@.valor=='IRIZAR_BRASIL')].descricao").value("Irizar Brasil"))
-                .andExpect(jsonPath("$.status[?(@.valor=='EM_MANUTENCAO')].descricao").value("Em manutenção"));
+                .andExpect(jsonPath("$.types", hasSize(3)))
+                .andExpect(jsonPath("$.models", hasSize(4)))
+                .andExpect(jsonPath("$.statuses", hasSize(3)))
+                .andExpect(jsonPath("$.types[?(@.value=='CONVENTIONAL')].label").value("Convencional"))
+                .andExpect(jsonPath("$.models[?(@.value=='IRIZAR_BRASIL')].label").value("Irizar Brasil"))
+                .andExpect(jsonPath("$.statuses[?(@.value=='UNDER_MAINTENANCE')].label").value("Em manutenção"));
     }
 
     @Test
-    void listarEnums_semToken_retorna401() throws Exception {
+    void listEnums_withoutToken_returns401() throws Exception {
         mockMvc.perform(get("/api/frota/enums"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void listarEnums_naoColideComBuscaPorId() throws Exception {
-        // /api/frota/enums nao pode ser interpretado como /api/frota/{id}
+    void listEnums_doesNotCollideWithFindById() throws Exception {
         mockMvc.perform(get("/api/frota/enums").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.tipos").exists());
+                .andExpect(jsonPath("$.types").exists());
     }
 
     @Test
-    void cadastrar_placaEmFormatoInvalido_retorna400() throws Exception {
-        String placaInvalida = VEICULO_VALIDO.replace("\"ABC1D23\"", "\"12345\"");
+    void create_licensePlateInInvalidFormat_returns400() throws Exception {
+        String invalidLicensePlate = VALID_VEHICLE.replace("\"ABC1D23\"", "\"12345\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(placaInvalida))
+                        .content(invalidLicensePlate))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.placa").exists());
+                .andExpect(jsonPath("$.licensePlate").exists());
     }
 
     @Test
-    void excluir_inativaEMantemRegistroConsultavel() throws Exception {
-        Long id = idDoVeiculoCadastrado();
+    void delete_deactivatesAndKeepsRecordQueryable() throws Exception {
+        Long id = createdVehicleId();
 
         mockMvc.perform(delete("/api/frota/{id}", id).header("Authorization", token))
                 .andExpect(status().isNoContent());
 
-        // Continua consultável, preservando o histórico...
         mockMvc.perform(get("/api/frota/{id}", id).header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("INATIVO"));
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
 
-        // ...mas sai da seleção de novas viagens.
-        mockMvc.perform(get("/api/frota").param("status", "ATIVO").header("Authorization", token))
+        mockMvc.perform(get("/api/frota").param("status", "ACTIVE").header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
-    void atualizar_alteraStatusParaEmManutencao() throws Exception {
-        Long id = idDoVeiculoCadastrado();
+    void update_changesStatusToUnderMaintenance() throws Exception {
+        Long id = createdVehicleId();
 
-        String emManutencao = VEICULO_VALIDO.replace(
-                "\"assentos\": 46", "\"assentos\": 46,\n  \"status\": \"EM_MANUTENCAO\"");
+        String underMaintenance = VALID_VEHICLE.replace(
+                "\"seats\": 46", "\"seats\": 46,\n  \"status\": \"UNDER_MAINTENANCE\"");
 
         mockMvc.perform(put("/api/frota/{id}", id)
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(emManutencao))
+                        .content(underMaintenance))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("EM_MANUTENCAO"));
+                .andExpect(jsonPath("$.status").value("UNDER_MAINTENANCE"));
     }
 
     @Test
-    void buscarPorId_inexistente_retorna404() throws Exception {
+    void findById_missing_returns404() throws Exception {
         mockMvc.perform(get("/api/frota/{id}", 9999).header("Authorization", token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.erro").exists());
     }
 
     @Test
-    void listar_comStatusForaDoEnum_retorna400() throws Exception {
+    void list_withStatusOutsideEnum_returns400() throws Exception {
         mockMvc.perform(get("/api/frota").param("status", "SUCATEADO").header("Authorization", token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.erro").value(containsString("EM_MANUTENCAO")));
+                .andExpect(jsonPath("$.erro").value(containsString("UNDER_MAINTENANCE")));
     }
 
     @Test
-    void conflito_trazMesmaMensagemEmErroEEmMessage() throws Exception {
-        cadastrarVeiculoValido();
+    void conflict_returnsSameMessageInErroAndMessage() throws Exception {
+        createValidVehicle();
 
-        String outroPrefixo = VEICULO_VALIDO.replace("\"1001\"", "\"1002\"");
+        String otherPrefix = VALID_VEHICLE.replace("\"1001\"", "\"1002\"");
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(outroPrefixo))
+                        .content(otherPrefix))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.erro").value(containsString("ABC1D23")))
                 .andExpect(jsonPath("$.message").value(containsString("ABC1D23")));
     }
 
     @Test
-    void erroDeValidacao_mantemCamposNaRaizEAdicionaMessage() throws Exception {
-        String semObrigatorios = """
+    void validationError_keepsFieldsAtRootAndAddsMessage() throws Exception {
+        String missingRequiredFields = """
                 {
-                  "placa": "ABC1D23"
+                  "licensePlate": "ABC1D23"
                 }
                 """;
 
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(semObrigatorios))
+                        .content(missingRequiredFields))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.prefixo").exists())
+                .andExpect(jsonPath("$.prefix").exists())
                 .andExpect(jsonPath("$.erro").exists())
                 .andExpect(jsonPath("$.message").exists());
     }
 
     @Test
-    void naoAutenticado_trazErroEMessage() throws Exception {
+    void unauthenticated_returnsErroAndMessage() throws Exception {
         mockMvc.perform(get("/api/frota"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.erro").exists())
@@ -334,23 +325,23 @@ class FrotaControllerTest {
     }
 
     @Test
-    void naoEncontrado_trazErroEMessage() throws Exception {
+    void notFound_returnsErroAndMessage() throws Exception {
         mockMvc.perform(get("/api/frota/{id}", 9999).header("Authorization", token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.erro").exists())
                 .andExpect(jsonPath("$.message").exists());
     }
 
-    private void cadastrarVeiculoValido() throws Exception {
+    private void createValidVehicle() throws Exception {
         mockMvc.perform(post("/api/frota")
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(VEICULO_VALIDO))
+                        .content(VALID_VEHICLE))
                 .andExpect(status().isCreated());
     }
 
-    private Long idDoVeiculoCadastrado() throws Exception {
-        cadastrarVeiculoValido();
-        return veiculoRepository.findAll().get(0).getId();
+    private Long createdVehicleId() throws Exception {
+        createValidVehicle();
+        return vehicleRepository.findAll().get(0).getId();
     }
 }

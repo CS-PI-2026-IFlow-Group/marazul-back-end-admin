@@ -17,121 +17,104 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-/**
- * Padrão das respostas de erro: toda exceção tratada devolve a mesma mensagem
- * nas chaves {@code erro} e {@code message}. A duplicação é intencional —
- * {@code erro} preserva o contrato já consumido e {@code message} é a chave
- * padronizada para o front-end.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
-        // Os erros por campo continuam na raiz do corpo, como o front já lê.
-        Map<String, String> corpo = new HashMap<>();
+        Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
-                .forEach(error -> corpo.put(error.getField(), error.getDefaultMessage()));
+                .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
 
-        corpo.putAll(corpo("Erro de validação. Verifique os campos informados."));
+        errors.putAll(body("Erro de validação. Verifique os campos informados."));
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<Map<String, String>> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(corpo(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(corpo(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidOrExpiredTokenException.class)
     public ResponseEntity<Map<String, String>> handleInvalidOrExpiredToken(InvalidOrExpiredTokenException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
 
-    @ExceptionHandler(PlacaAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>> handlePlacaAlreadyExists(PlacaAlreadyExistsException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(corpo(ex.getMessage()));
+    @ExceptionHandler(LicensePlateAlreadyExistsException.class)
+    public ResponseEntity<Map<String, String>> handleLicensePlateAlreadyExists(LicensePlateAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body(ex.getMessage()));
     }
 
-    @ExceptionHandler(VeiculoNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleVeiculoNotFound(VeiculoNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(corpo(ex.getMessage()));
+    @ExceptionHandler(VehicleNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleVehicleNotFound(VehicleNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFound(UserNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(FuncionarioNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleFuncionarioNotFound(FuncionarioNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(corpo(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(FuncionarioValidationException.class)
     public ResponseEntity<Map<String, String>> handleFuncionarioValidation(FuncionarioValidationException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
 
-    /**
-     * Corpo da requisição malformado ou valor de ENUM inválido (ex.: tipo/modelo/status
-     * fora dos valores permitidos). Retorna 400 com mensagem clara e objetiva.
-     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> handleNotReadable(HttpMessageNotReadableException ex) {
-        String mensagem = "Requisição inválida: verifique o formato dos dados enviados.";
+        String message = "Requisição inválida: verifique o formato dos dados enviados.";
 
-        if (ex.getCause() instanceof InvalidFormatException causa) {
-            String campo = causa.getPath().stream()
+        if (ex.getCause() instanceof InvalidFormatException cause) {
+            String field = cause.getPath().stream()
                     .map(Reference::getPropertyName)
                     .filter(Objects::nonNull)
-                    .reduce((primeiro, ultimo) -> ultimo)
+                    .reduce((first, last) -> last)
                     .orElse("desconhecido");
 
-            mensagem = "Valor inválido para o campo '" + campo + "': " + causa.getValue()
-                    + "." + valoresAceitos(causa.getTargetType());
+            message = "Valor inválido para o campo '" + field + "': " + cause.getValue()
+                    + "." + acceptedValues(cause.getTargetType());
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo(mensagem));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(message));
     }
 
-    /**
-     * Parâmetro de rota ou de query com tipo incompatível, como
-     * {@code /api/frota?status=QUALQUER_COISA}.
-     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        String mensagem = "Valor inválido para o parâmetro '" + ex.getName() + "': " + ex.getValue()
-                + "." + valoresAceitos(ex.getRequiredType());
+        String message = "Valor inválido para o parâmetro '" + ex.getName() + "': " + ex.getValue()
+                + "." + acceptedValues(ex.getRequiredType());
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo(mensagem));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(message));
     }
 
-    /**
-     * Rede de segurança para violações de constraint que escapam da checagem
-     * prévia da aplicação — notadamente duas requisições concorrentes tentando
-     * gravar a mesma placa.
-     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(corpo("A operação viola uma restrição de integridade dos dados. "
+                .body(body("A operação viola uma restrição de integridade dos dados. "
                         + "Verifique se a placa informada já está cadastrada."));
     }
 
-    /** Corpo padrão de erro: a mesma mensagem em {@code erro} e em {@code message}. */
-    private static Map<String, String> corpo(String mensagem) {
-        return Map.of("erro", mensagem, "message", mensagem);
+    private static Map<String, String> body(String message) {
+        return Map.of("erro", message, "message", message);
     }
 
-    /** Complemento da mensagem listando os valores de um enum, quando aplicável. */
-    private static String valoresAceitos(Class<?> tipo) {
-        if (tipo == null || !tipo.isEnum()) {
+    private static String acceptedValues(Class<?> type) {
+        if (type == null || !type.isEnum()) {
             return "";
         }
-        String valores = Arrays.stream(tipo.getEnumConstants())
+        String values = Arrays.stream(type.getEnumConstants())
                 .map(Object::toString)
                 .collect(Collectors.joining(", "));
-        return " Valores aceitos: " + valores + ".";
+        return " Valores aceitos: " + values + ".";
     }
 }

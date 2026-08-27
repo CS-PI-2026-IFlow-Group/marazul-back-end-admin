@@ -2,10 +2,12 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.SessionUserResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
+import br.com.marazulturismo.marazulbackendadmin.exception.UserNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
@@ -81,6 +83,12 @@ public class AuthService {
 
         }
 
+    }
+
+    public SessionUserResponseDTO findSessionUser(Long id) {
+        return userRepository.findById(id)
+                .map(SessionUserResponseDTO::fromEntity)
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 
     public User login(LoginRequestDTO dto) {
