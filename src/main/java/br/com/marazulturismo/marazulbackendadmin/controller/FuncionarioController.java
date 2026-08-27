@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/funcionarios")
+@RequestMapping("/funcionario")
 public class FuncionarioController {
 
     private final FuncionarioService funcionarioService;
