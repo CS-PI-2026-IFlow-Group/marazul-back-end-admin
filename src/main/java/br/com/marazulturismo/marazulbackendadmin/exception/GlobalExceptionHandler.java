@@ -1,9 +1,13 @@
 package br.com.marazulturismo.marazulbackendadmin.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,6 +23,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
@@ -102,6 +108,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(body("A operação viola uma restrição de integridade dos dados. "
                         + "Verifique se a placa informada já está cadastrada."));
+    }
+
+    @ExceptionHandler({DataAccessException.class, TransactionException.class})
+    public ResponseEntity<Map<String, String>> handleDatabaseFailure(Exception ex) {
+        log.error("Falha de acesso ao banco de dados", ex);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(body("Não foi possível processar a requisição no momento. Tente novamente mais tarde."));
     }
 
     private static Map<String, String> body(String message) {
