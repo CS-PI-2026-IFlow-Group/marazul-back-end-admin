@@ -1,17 +1,13 @@
 package br.com.marazulturismo.marazulbackendadmin.enums;
 
-public enum CNHType {
+public enum EmployeeStatus {
 
-    A("A"),
-    B("B"),
-    AB("AB"),
-    C("C"),
-    D("D"),
-    E("E");
+    ACTIVE("Ativo"),
+    INACTIVE("Inativo");
 
     private final String label;
 
-    CNHType(String label) {
+    EmployeeStatus(String label) {
         this.label = label;
     }
 

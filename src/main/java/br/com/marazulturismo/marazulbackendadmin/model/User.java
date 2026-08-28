@@ -62,11 +62,11 @@ public class User {
         this.resetTokenExpiration = null;
     }
 
-    public void updateSenhaHash(String senhaHash) {
-        this.passwordHash = senhaHash;
+    public void updatePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
-    public void atualizar(String name, String email, String cellphoneNumber, Position position, CNH cnh) {
+    public void update(String name, String email, String cellphoneNumber, Position position, CNH cnh) {
         this.name = name;
         this.email = email;
         this.cellphoneNumber = cellphoneNumber;
@@ -74,12 +74,16 @@ public class User {
         this.cnh = cnh;
     }
 
-    public void inativar() {
+    public void deactivate() {
         this.disabledAt = new Date();
     }
 
-    public boolean isInativo() {
-        return disabledAt != null;
+    public void activate() {
+        this.disabledAt = null;
+    }
+
+    public boolean isActive() {
+        return disabledAt == null;
     }
 
     public User(

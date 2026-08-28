@@ -1,32 +1,39 @@
 package br.com.marazulturismo.marazulbackendadmin.dto;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
+import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.StatusFuncionario;
+import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 
-public record FuncionarioResponseDTO(
+import java.util.Date;
+
+public record EmployeeResponseDTO(
         Long id,
         String name,
         String email,
         String cellphoneNumber,
+        Date admissionDate,
         Position position,
+        UserRole userRole,
         String cnhNumber,
         CNHType cnhType,
-        StatusFuncionario status
+        EmployeeStatus status
 ) {
-    public static FuncionarioResponseDTO fromEntity(User user) {
+    public static EmployeeResponseDTO fromEntity(User user) {
         CNH cnh = user.getCnh();
-        return new FuncionarioResponseDTO(
+        return new EmployeeResponseDTO(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
                 user.getCellphoneNumber(),
+                user.getAdmissionDate(),
                 user.getPosition(),
+                user.getUserRole(),
                 cnh == null ? null : cnh.getNumber(),
                 cnh == null ? null : cnh.getType(),
-                user.isInativo() ? StatusFuncionario.INATIVO : StatusFuncionario.ATIVO
+                user.isActive() ? EmployeeStatus.ACTIVE : EmployeeStatus.INACTIVE
         );
     }
 }

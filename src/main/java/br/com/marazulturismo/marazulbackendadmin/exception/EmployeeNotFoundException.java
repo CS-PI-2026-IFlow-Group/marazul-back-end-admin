@@ -1,7 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.exception;
 
-public class FuncionarioNotFoundException extends RuntimeException {
-    public FuncionarioNotFoundException(Long id) {
+public class EmployeeNotFoundException extends RuntimeException {
+    public EmployeeNotFoundException(Long id) {
         super("Funcionário não encontrado: " + id + ".");
     }
 }

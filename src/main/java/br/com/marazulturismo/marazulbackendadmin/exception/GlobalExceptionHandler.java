@@ -67,13 +67,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
     }
 
-    @ExceptionHandler(FuncionarioNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleFuncionarioNotFound(FuncionarioNotFoundException ex) {
+    @ExceptionHandler(EmployeeNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleEmployeeNotFound(EmployeeNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
     }
 
-    @ExceptionHandler(FuncionarioValidationException.class)
-    public ResponseEntity<Map<String, String>> handleFuncionarioValidation(FuncionarioValidationException ex) {
+    @ExceptionHandler(EmployeeValidationException.class)
+    public ResponseEntity<Map<String, String>> handleEmployeeValidation(EmployeeValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
 
