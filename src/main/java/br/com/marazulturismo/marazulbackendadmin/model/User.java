@@ -66,11 +66,24 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public void update(String name, String email, String cellphoneNumber, Position position, CNH cnh) {
+    public void update(
+            String name,
+            String email,
+            String cellphoneNumber,
+            Position position,
+            UserRole userRole,
+            Date admissionDate,
+            CNH cnh) {
         this.name = name;
         this.email = email;
         this.cellphoneNumber = cellphoneNumber;
         this.position = position;
+        if (userRole != null) {
+            this.userRole = userRole;
+        }
+        if (admissionDate != null) {
+            this.admissionDate = admissionDate;
+        }
         this.cnh = cnh;
     }
 

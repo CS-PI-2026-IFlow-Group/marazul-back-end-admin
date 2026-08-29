@@ -48,11 +48,14 @@ public class EmployeeService {
         validateEmailAvailability(dto.email(), null);
         CNH cnh = buildCnh(dto);
 
+        Date admissionDate = dto.admissionDate() != null ? dto.admissionDate() : new Date();
+        UserRole userRole = dto.userRole() != null ? dto.userRole() : UserRole.USER;
+
         User employee = new User(
                 dto.name(),
-                new Date(),
+                admissionDate,
                 dto.position(),
-                UserRole.USER,
+                userRole,
                 dto.email(),
                 dto.cellphoneNumber(),
                 cnh,
@@ -69,7 +72,15 @@ public class EmployeeService {
         validateEmailAvailability(dto.email(), id);
         CNH cnh = buildCnh(dto);
 
-        employee.update(dto.name(), dto.email(), dto.cellphoneNumber(), dto.position(), cnh);
+        employee.update(
+                dto.name(),
+                dto.email(),
+                dto.cellphoneNumber(),
+                dto.position(),
+                dto.userRole(),
+                dto.admissionDate(),
+                cnh
+        );
         applyStatus(employee, dto.status());
         return EmployeeResponseDTO.fromEntity(userRepository.save(employee));
     }

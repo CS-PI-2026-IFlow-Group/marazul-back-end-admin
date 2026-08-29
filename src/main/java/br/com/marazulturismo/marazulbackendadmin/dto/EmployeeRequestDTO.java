@@ -3,12 +3,17 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.Date;
 import java.util.Locale;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record EmployeeRequestDTO(
 
         @NotBlank(message = "O nome é obrigatório.")
@@ -18,6 +23,11 @@ public record EmployeeRequestDTO(
         String email,
 
         String cellphoneNumber,
+
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+        Date admissionDate,
+
+        UserRole userRole,
 
         @NotNull(message = "O cargo é obrigatório.")
         Position position,
@@ -35,3 +45,4 @@ public record EmployeeRequestDTO(
         }
     }
 }
+

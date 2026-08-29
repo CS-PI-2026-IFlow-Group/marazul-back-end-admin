@@ -7,6 +7,8 @@ import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.User;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.util.Date;
 
 public record EmployeeResponseDTO(
@@ -14,6 +16,7 @@ public record EmployeeResponseDTO(
         String name,
         String email,
         String cellphoneNumber,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         Date admissionDate,
         Position position,
         UserRole userRole,
