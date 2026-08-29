@@ -52,7 +52,7 @@ public class PasswordResetService {
             throw new InvalidOrExpiredTokenException();
         }
 
-        user.updateSenhaHash(passwordEncoder.encode(novaSenha));
+        user.updatePasswordHash(passwordEncoder.encode(novaSenha));
         user.clearPasswordResetToken();
         userRepository.save(user);
     }

@@ -62,8 +62,41 @@ public class User {
         this.resetTokenExpiration = null;
     }
 
-    public void updateSenhaHash(String senhaHash) {
-        this.passwordHash = senhaHash;
+    public void updatePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void update(
+            String name,
+            String email,
+            String cellphoneNumber,
+            Position position,
+            UserRole userRole,
+            Date admissionDate,
+            CNH cnh) {
+        this.name = name;
+        this.email = email;
+        this.cellphoneNumber = cellphoneNumber;
+        this.position = position;
+        if (userRole != null) {
+            this.userRole = userRole;
+        }
+        if (admissionDate != null) {
+            this.admissionDate = admissionDate;
+        }
+        this.cnh = cnh;
+    }
+
+    public void deactivate() {
+        this.disabledAt = new Date();
+    }
+
+    public void activate() {
+        this.disabledAt = null;
+    }
+
+    public boolean isActive() {
+        return disabledAt == null;
     }
 
     public User(
