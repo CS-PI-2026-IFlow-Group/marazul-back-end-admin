@@ -2,17 +2,17 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import java.util.Locale;
 
 public record RegisterRequestDTO(
 
         @NotBlank
         String name,
 
-        @NotBlank
         @Email
         String email,
 
@@ -25,5 +25,15 @@ public record RegisterRequestDTO(
         Position position,
 
         @NotNull
-        UserRole userRole
-) {}
+        Boolean isUser,
+
+        @NotNull
+        Long profileId
+) {
+    public RegisterRequestDTO {
+        if (email != null) {
+            email = email.trim();
+            email = email.isEmpty() ? null : email.toLowerCase(Locale.ROOT);
+        }
+    }
+}

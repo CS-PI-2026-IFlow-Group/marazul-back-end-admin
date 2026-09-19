@@ -2,12 +2,12 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.BodyworkModel;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Vehicle;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import io.jsonwebtoken.Jwts;
@@ -49,6 +49,9 @@ class DashboardControllerTest {
     private CollaboratorRepository userRepository;
 
     @Autowired
+    private ProfileRepository profileRepository;
+
+    @Autowired
     private VehicleRepository vehicleRepository;
 
     @PersistenceContext
@@ -69,7 +72,7 @@ class DashboardControllerTest {
                 "Admin Teste",
                 new Date(),
                 Position.OTHER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "admin@marazul.test",
                 null,
                 null,
@@ -166,7 +169,7 @@ class DashboardControllerTest {
                 name,
                 new Date(),
                 Position.DRIVER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 email,
                 null,
                 null,
@@ -187,7 +190,6 @@ class DashboardControllerTest {
         return Jwts.builder()
                 .subject(admin.getEmail())
                 .claim("id", admin.getId())
-                .claim("role", admin.getUserRole().name())
                 .issuedAt(new Date(now - 9L * 60 * 60 * 1000))
                 .expiration(new Date(now - 60L * 1000))
                 .signWith(key)

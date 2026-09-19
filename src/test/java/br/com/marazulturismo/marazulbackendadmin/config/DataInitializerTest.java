@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.tuple;
 @Transactional
 class DataInitializerTest {
 
+    private static final String ADMIN_PROFILE_NAME = "Administrador";
+
     private static final Map<RequestMethod, String> FEATURE_BY_METHOD = Map.of(
             RequestMethod.POST, "create",
             RequestMethod.GET, "view",
@@ -121,6 +123,6 @@ class DataInitializerTest {
     }
 
     private Profile adminProfile() {
-        return profileRepository.findByName(DataInitializer.ADMIN_PROFILE_NAME).orElseThrow();
+        return profileRepository.findByName(ADMIN_PROFILE_NAME).orElseThrow();
     }
 }

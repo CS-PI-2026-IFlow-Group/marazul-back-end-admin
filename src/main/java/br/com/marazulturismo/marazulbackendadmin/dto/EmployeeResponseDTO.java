@@ -3,13 +3,13 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Date;
+import java.time.LocalDateTime;
 
 public record EmployeeResponseDTO(
         Long id,
@@ -19,7 +19,9 @@ public record EmployeeResponseDTO(
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         Date admissionDate,
         Position position,
-        UserRole userRole,
+        Boolean isUser,
+        Long profileId,
+        LocalDateTime ultimoAcesso,
         String cnhNumber,
         CNHType cnhType,
         EmployeeStatus status
@@ -33,7 +35,9 @@ public record EmployeeResponseDTO(
                 user.getCellphoneNumber(),
                 user.getAdmissionDate(),
                 user.getPosition(),
-                user.getUserRole(),
+                user.getIsUser(),
+                user.getProfile().getId(),
+                user.getLastAccess(),
                 cnh == null ? null : cnh.getNumber(),
                 cnh == null ? null : cnh.getType(),
                 user.isActive() ? EmployeeStatus.ACTIVE : EmployeeStatus.INACTIVE

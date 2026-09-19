@@ -1,7 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.config;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
@@ -93,7 +92,8 @@ public class DataInitializer implements CommandLineRunner {
                     "Administrador",
                     new Date(),
                     Position.OTHER,
-                    UserRole.ADMIN,
+                    true,
+                    profileRepository.findByName(ADMIN_PROFILE_NAME).orElseThrow(),
                     adminEmail,
                     "(11) 99999-9999",
                     null,

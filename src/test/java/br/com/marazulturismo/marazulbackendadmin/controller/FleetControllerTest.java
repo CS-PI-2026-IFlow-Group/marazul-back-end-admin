@@ -1,9 +1,9 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +41,9 @@ class FleetControllerTest {
     private CollaboratorRepository userRepository;
 
     @Autowired
+    private ProfileRepository profileRepository;
+
+    @Autowired
     private VehicleRepository vehicleRepository;
 
     private String token;
@@ -64,7 +67,7 @@ class FleetControllerTest {
                 "Admin Teste",
                 new Date(),
                 Position.DRIVER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "admin@marazul.test",
                 null,
                 null,

@@ -1,9 +1,9 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +34,9 @@ class SessionControllerTest {
     @Autowired
     private CollaboratorRepository userRepository;
 
+    @Autowired
+    private ProfileRepository profileRepository;
+
     private Collaborator admin;
     private String token;
 
@@ -45,7 +48,7 @@ class SessionControllerTest {
                 "Ana Souza",
                 new Date(),
                 Position.OTHER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "ana.souza@marazul.test",
                 null,
                 null,
@@ -111,7 +114,7 @@ class SessionControllerTest {
                 "Bruno Lima",
                 new Date(),
                 Position.OTHER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "bruno.lima@marazul.test",
                 null,
                 null,

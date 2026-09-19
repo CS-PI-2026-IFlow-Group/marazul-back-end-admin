@@ -1,7 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.model;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -25,9 +24,9 @@ public class Collaborator {
 
     private LocalDateTime lastAccess;
 
-    // @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    // @JoinColumn(name = "profile_id", nullable = false)
-    // private Profile profile;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private Profile profile;
 
     @Column(nullable = false)
     private String name;
@@ -38,10 +37,6 @@ public class Collaborator {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Position position;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole userRole;
 
     @Column(nullable = true, unique = true)
     private String email;
@@ -77,21 +72,25 @@ public class Collaborator {
         this.passwordHash = passwordHash;
     }
 
+    public void registerAccess() {
+        this.lastAccess = LocalDateTime.now();
+    }
+
     public void update(
             String name,
             String email,
             String cellphoneNumber,
             Position position,
-            UserRole userRole,
+            Boolean isUser,
+            Profile profile,
             Date admissionDate,
             CNH cnh) {
         this.name = name;
         this.email = email;
         this.cellphoneNumber = cellphoneNumber;
         this.position = position;
-        if (userRole != null) {
-            this.userRole = userRole;
-        }
+        this.isUser = Boolean.TRUE.equals(isUser);
+        this.profile = profile;
         if (admissionDate != null) {
             this.admissionDate = admissionDate;
         }
@@ -114,7 +113,8 @@ public class Collaborator {
             String name,
             Date admissionDate,
             Position position,
-            UserRole userRole,
+            Boolean isUser,
+            Profile profile,
             String email,
             String cellphoneNumber,
             CNH cnh,
@@ -123,7 +123,8 @@ public class Collaborator {
         this.name = name;
         this.admissionDate = admissionDate;
         this.position = position;
-        this.userRole = userRole;
+        this.isUser = Boolean.TRUE.equals(isUser);
+        this.profile = profile;
         this.email = email;
         this.cellphoneNumber = cellphoneNumber;
         this.cnh = cnh;

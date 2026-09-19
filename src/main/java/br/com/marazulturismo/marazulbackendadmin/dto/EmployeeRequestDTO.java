@@ -3,7 +3,6 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Email;
@@ -27,7 +26,10 @@ public record EmployeeRequestDTO(
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         Date admissionDate,
 
-        UserRole userRole,
+        Boolean isUser,
+
+        @NotNull(message = "O perfil é obrigatório.")
+        Long profileId,
 
         @NotNull(message = "O cargo é obrigatório.")
         Position position,
