@@ -6,17 +6,28 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
-@Table(name = "users")
+@Table(name = "collaborators")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class Collaborator {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
+    private Boolean isUser = false;
+
+    private LocalDateTime lastAccess;
+
+    // @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    // @JoinColumn(name = "profile_id", nullable = false)
+    // private Profile profile;
 
     @Column(nullable = false)
     private String name;
@@ -35,7 +46,7 @@ public class User {
     @Column(nullable = true, unique = true)
     private String email;
 
-    @Column(name = "senha_hash")
+    @Column(name = "password_hash")
     private String passwordHash;
 
     private Date disabledAt;
@@ -99,7 +110,7 @@ public class User {
         return disabledAt == null;
     }
 
-    public User(
+    public Collaborator(
             String name,
             Date admissionDate,
             Position position,

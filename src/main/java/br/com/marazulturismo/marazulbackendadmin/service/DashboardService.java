@@ -1,7 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.DashboardMetricsResponseDTO;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,9 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class DashboardService {
 
     private final VehicleRepository vehicleRepository;
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
 
-    public DashboardService(VehicleRepository vehicleRepository, UserRepository userRepository) {
+    public DashboardService(VehicleRepository vehicleRepository, CollaboratorRepository userRepository) {
         this.vehicleRepository = vehicleRepository;
         this.userRepository = userRepository;
     }

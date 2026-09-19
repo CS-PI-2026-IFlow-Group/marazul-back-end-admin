@@ -10,8 +10,8 @@ import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsExc
 import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeValidationException;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @Service
 public class EmployeeService {
 
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
 
-    public EmployeeService(UserRepository userRepository) {
+    public EmployeeService(CollaboratorRepository userRepository) {
         this.userRepository = userRepository;
     }
 
@@ -51,7 +51,7 @@ public class EmployeeService {
         Date admissionDate = dto.admissionDate() != null ? dto.admissionDate() : new Date();
         UserRole userRole = dto.userRole() != null ? dto.userRole() : UserRole.USER;
 
-        User employee = new User(
+        Collaborator employee = new Collaborator(
                 dto.name(),
                 admissionDate,
                 dto.position(),
@@ -68,7 +68,7 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeResponseDTO update(Long id, EmployeeRequestDTO dto) {
-        User employee = findEntity(id);
+        Collaborator employee = findEntity(id);
         validateEmailAvailability(dto.email(), id);
         CNH cnh = buildCnh(dto);
 
@@ -87,17 +87,17 @@ public class EmployeeService {
 
     @Transactional
     public void delete(Long id) {
-        User employee = findEntity(id);
+        Collaborator employee = findEntity(id);
         employee.deactivate();
         userRepository.save(employee);
     }
 
-    private User findEntity(Long id) {
+    private Collaborator findEntity(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
     }
 
-    private List<User> findEmployees(Position position, EmployeeStatus status) {
+    private List<Collaborator> findEmployees(Position position, EmployeeStatus status) {
         if (position == null && status == null) {
             return userRepository.findAll();
         }
@@ -139,7 +139,7 @@ public class EmployeeService {
         return new CNH(dto.cnhNumber().trim(), dto.cnhType());
     }
 
-    private static void applyStatus(User employee, EmployeeStatus status) {
+    private static void applyStatus(Collaborator employee, EmployeeStatus status) {
         if (status == EmployeeStatus.ACTIVE) {
             employee.activate();
         } else if (status == EmployeeStatus.INACTIVE) {

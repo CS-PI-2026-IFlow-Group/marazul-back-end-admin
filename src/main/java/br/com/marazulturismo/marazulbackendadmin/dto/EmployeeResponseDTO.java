@@ -5,7 +5,7 @@ import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -24,7 +24,7 @@ public record EmployeeResponseDTO(
         CNHType cnhType,
         EmployeeStatus status
 ) {
-    public static EmployeeResponseDTO fromEntity(User user) {
+    public static EmployeeResponseDTO fromEntity(Collaborator user) {
         CNH cnh = user.getCnh();
         return new EmployeeResponseDTO(
                 user.getId(),

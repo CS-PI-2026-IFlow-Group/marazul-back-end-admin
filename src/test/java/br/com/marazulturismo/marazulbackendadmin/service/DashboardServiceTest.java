@@ -1,7 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.DashboardMetricsResponseDTO;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +22,7 @@ class DashboardServiceTest {
     private VehicleRepository vehicleRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private CollaboratorRepository userRepository;
 
     @InjectMocks
     private DashboardService dashboardService;

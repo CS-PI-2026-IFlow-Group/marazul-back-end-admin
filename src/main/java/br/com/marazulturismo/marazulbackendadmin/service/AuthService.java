@@ -9,8 +9,8 @@ import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsExc
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.UserNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -22,13 +22,13 @@ import java.util.Date;
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailSenderService emailSenderService;
     private final PasswordResetService passwordResetService;
     private final String definePasswordUrl;
 
-    public AuthService(UserRepository userRepository, 
+    public AuthService(CollaboratorRepository userRepository,
         EmailSenderService emailSenderService, PasswordResetService passwordResetService, 
         @Value("${app.password-define.base-url}") String definePasswordUrl) {
         this.userRepository = userRepository;
@@ -50,7 +50,7 @@ public class AuthService {
                 ? null
                 : new CNH(dto.cnhNumber(), dto.cnhType());
 
-        User user = new User(
+        Collaborator user = new Collaborator(
                 dto.name(),
                 new Date(),
                 position,
@@ -91,8 +91,8 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
-    public User login(LoginRequestDTO dto) {
-        User user = userRepository.findByEmail(dto.email())
+    public Collaborator login(LoginRequestDTO dto) {
+        Collaborator user = userRepository.findByEmail(dto.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (!passwordEncoder.matches(dto.senha(), user.getPasswordHash())) {
