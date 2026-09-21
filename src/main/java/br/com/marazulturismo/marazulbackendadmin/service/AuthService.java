@@ -5,6 +5,7 @@ import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.SessionUserResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
+import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeValidationException;
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.UserNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
@@ -45,19 +46,17 @@ public class AuthService {
 
     public void register(RegisterRequestDTO dto) {
         if (Boolean.TRUE.equals(dto.isUser()) && dto.email() == null) {
-            throw new IllegalArgumentException("O e-mail é obrigatório para colaboradores com acesso ao sistema.");
+            throw new EmployeeValidationException("O e-mail é obrigatório para colaboradores com acesso ao sistema.");
         }
         if (dto.email() != null && userRepository.existsByEmail(dto.email())) {
             throw new EmailAlreadyExistsException(dto.email());
         }
 
         Position position = dto.position() == Position.DRIVER ? Position.DRIVER : Position.OTHER;
-        CNH cnh = dto.cnhNumber() == null && dto.cnhType() == null
-                ? null
-                : new CNH(dto.cnhNumber(), dto.cnhType());
+        CNH cnh = buildCnh(dto);
 
         Profile profile = profileRepository.findById(dto.profileId())
-                .orElseThrow(() -> new IllegalArgumentException("O perfil informado não existe."));
+                .orElseThrow(() -> new EmployeeValidationException("O perfil informado não existe."));
         Collaborator user = new Collaborator(
                 dto.name(),
                 new Date(),
@@ -146,5 +145,18 @@ public class AuthService {
         }
 
         return baseUrl + "/define-password?token=" + token;
+    }
+
+    private static CNH buildCnh(RegisterRequestDTO dto) {
+        if (dto.position() != Position.DRIVER) {
+            return null;
+        }
+
+        if (dto.cnhNumber() == null || dto.cnhNumber().isBlank() || dto.cnhType() == null) {
+            throw new EmployeeValidationException(
+                    "CNH e categoria da CNH são obrigatórias para funcionários motoristas.");
+        }
+
+        return new CNH(dto.cnhNumber().trim(), dto.cnhType());
     }
 }
