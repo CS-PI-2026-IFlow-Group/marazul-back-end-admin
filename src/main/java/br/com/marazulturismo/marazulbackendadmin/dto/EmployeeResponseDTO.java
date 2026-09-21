@@ -21,7 +21,7 @@ public record EmployeeResponseDTO(
         Position position,
         Boolean isUser,
         Long profileId,
-        LocalDateTime ultimoAcesso,
+        LocalDateTime lastAccess,
         String cnhNumber,
         CNHType cnhType,
         EmployeeStatus status
