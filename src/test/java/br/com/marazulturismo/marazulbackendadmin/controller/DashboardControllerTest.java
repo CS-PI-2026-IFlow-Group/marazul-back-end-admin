@@ -2,12 +2,12 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.BodyworkModel;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Vehicle;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import io.jsonwebtoken.Jwts;
@@ -46,7 +46,10 @@ class DashboardControllerTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserRepository userRepository;
+    private CollaboratorRepository userRepository;
+
+    @Autowired
+    private ProfileRepository profileRepository;
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -57,7 +60,7 @@ class DashboardControllerTest {
     @Value("${api.security.token.secret}")
     private String secret;
 
-    private User admin;
+    private Collaborator admin;
     private String token;
 
     @BeforeEach
@@ -65,11 +68,11 @@ class DashboardControllerTest {
         vehicleRepository.deleteAll();
         userRepository.deleteAll();
 
-        admin = userRepository.save(new User(
+        admin = userRepository.save(new Collaborator(
                 "Admin Teste",
                 new Date(),
                 Position.OTHER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "admin@marazul.test",
                 null,
                 null,
@@ -161,20 +164,20 @@ class DashboardControllerTest {
                 status));
     }
 
-    private User saveEmployee(String name, String email) {
-        return userRepository.save(new User(
+    private Collaborator saveEmployee(String name, String email) {
+        return userRepository.save(new Collaborator(
                 name,
                 new Date(),
                 Position.DRIVER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 email,
                 null,
                 null,
                 "hash-irrelevante"));
     }
 
-    private void disable(User user) {
-        entityManager.createQuery("UPDATE User u SET u.disabledAt = :moment WHERE u.id = :id")
+    private void disable(Collaborator user) {
+        entityManager.createQuery("UPDATE Collaborator c SET c.disabledAt = :moment WHERE c.id = :id")
                 .setParameter("moment", new Date())
                 .setParameter("id", user.getId())
                 .executeUpdate();
@@ -187,7 +190,6 @@ class DashboardControllerTest {
         return Jwts.builder()
                 .subject(admin.getEmail())
                 .claim("id", admin.getId())
-                .claim("role", admin.getUserRole().name())
                 .issuedAt(new Date(now - 9L * 60 * 60 * 1000))
                 .expiration(new Date(now - 60L * 1000))
                 .signWith(key)

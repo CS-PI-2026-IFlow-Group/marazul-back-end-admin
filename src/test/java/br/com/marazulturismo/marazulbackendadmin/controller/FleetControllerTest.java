@@ -1,9 +1,9 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +38,10 @@ class FleetControllerTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserRepository userRepository;
+    private CollaboratorRepository userRepository;
+
+    @Autowired
+    private ProfileRepository profileRepository;
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -60,11 +63,11 @@ class FleetControllerTest {
     void setUp() {
         vehicleRepository.deleteAll();
 
-        User admin = userRepository.save(new User(
+        Collaborator admin = userRepository.save(new Collaborator(
                 "Admin Teste",
                 new Date(),
                 Position.DRIVER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "admin@marazul.test",
                 null,
                 null,

@@ -5,7 +5,7 @@ import br.com.marazulturismo.marazulbackendadmin.dto.EmployeeRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.EmployeeResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.service.EmployeeService;
+import br.com.marazulturismo.marazulbackendadmin.service.CollaboratorService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,9 +25,9 @@ import java.util.List;
 @RequestMapping("/api/funcionario")
 public class EmployeeController {
 
-    private final EmployeeService employeeService;
+    private final CollaboratorService employeeService;
 
-    public EmployeeController(EmployeeService employeeService) {
+    public EmployeeController(CollaboratorService employeeService) {
         this.employeeService = employeeService;
     }
 

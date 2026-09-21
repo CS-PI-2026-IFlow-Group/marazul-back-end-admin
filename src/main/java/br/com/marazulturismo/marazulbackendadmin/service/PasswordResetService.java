@@ -1,8 +1,8 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidOrExpiredTokenException;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,7 +14,7 @@ import java.util.UUID;
 @Service
 public class PasswordResetService {
 
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
     private final EmailSenderService emailSenderService;
     private final BCryptPasswordEncoder passwordEncoder;
 
@@ -26,7 +26,7 @@ public class PasswordResetService {
 
     private static final long TOKEN_EXPIRATION_MS = 15L * 60 * 1000;
 
-    public PasswordResetService(UserRepository userRepository, EmailSenderService emailSenderService) {
+    public PasswordResetService(CollaboratorRepository userRepository, EmailSenderService emailSenderService) {
         this.userRepository = userRepository;
         this.emailSenderService = emailSenderService;
         this.passwordEncoder = new BCryptPasswordEncoder();
@@ -42,7 +42,7 @@ public class PasswordResetService {
     }
 
     public void resetPassword(String token, String novaSenha) {
-        User user = userRepository.findByResetToken(token)
+        Collaborator user = userRepository.findByResetToken(token)
                 .orElseThrow(InvalidOrExpiredTokenException::new);
 
         Date expiration = user.getResetTokenExpiration();
@@ -67,7 +67,7 @@ public class PasswordResetService {
             "passwordReset", context);
     }
 
-    public String createResetToken(User user){
+    public String createResetToken(Collaborator user){
         String token = UUID.randomUUID().toString();
         Date expiration = new Date(System.currentTimeMillis() + TOKEN_EXPIRATION_MS);
 

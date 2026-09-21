@@ -1,13 +1,12 @@
 package br.com.marazulturismo.marazulbackendadmin.config;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.PermissionRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -39,13 +38,13 @@ public class DataInitializer implements CommandLineRunner {
             new PermissionSeed("frota", "delete")
     );
 
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
     private final PermissionRepository permissionRepository;
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(
-            UserRepository userRepository,
+            CollaboratorRepository userRepository,
             PermissionRepository permissionRepository,
             ProfileRepository profileRepository,
             PasswordEncoder passwordEncoder) {
@@ -89,11 +88,12 @@ public class DataInitializer implements CommandLineRunner {
         String adminEmail = "admin@marazul.com.br";
 
         if (!userRepository.existsByEmail(adminEmail)) {
-            User admin = new User(
+            Collaborator admin = new Collaborator(
                     "Administrador",
                     new Date(),
                     Position.OTHER,
-                    UserRole.ADMIN,
+                    true,
+                    profileRepository.findByName(ADMIN_PROFILE_NAME).orElseThrow(),
                     adminEmail,
                     "(11) 99999-9999",
                     null,

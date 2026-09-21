@@ -5,13 +5,14 @@ import br.com.marazulturismo.marazulbackendadmin.dto.EmployeeRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.EmployeeResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.EmployeeStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeValidationException;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Profile;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +20,14 @@ import java.util.Date;
 import java.util.List;
 
 @Service
-public class EmployeeService {
+public class CollaboratorService {
 
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
+    private final ProfileRepository profileRepository;
 
-    public EmployeeService(UserRepository userRepository) {
+    public CollaboratorService(CollaboratorRepository userRepository, ProfileRepository profileRepository) {
         this.userRepository = userRepository;
+        this.profileRepository = profileRepository;
     }
 
     @Transactional(readOnly = true)
@@ -45,17 +48,18 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeResponseDTO create(EmployeeRequestDTO dto) {
-        validateEmailAvailability(dto.email(), null);
+        validateEmail(dto.email(), dto.isUser(), null);
         CNH cnh = buildCnh(dto);
+        Profile profile = findProfile(dto.profileId());
 
         Date admissionDate = dto.admissionDate() != null ? dto.admissionDate() : new Date();
-        UserRole userRole = dto.userRole() != null ? dto.userRole() : UserRole.USER;
 
-        User employee = new User(
+        Collaborator employee = new Collaborator(
                 dto.name(),
                 admissionDate,
                 dto.position(),
-                userRole,
+                dto.isUser(),
+                profile,
                 dto.email(),
                 dto.cellphoneNumber(),
                 cnh,
@@ -68,16 +72,18 @@ public class EmployeeService {
 
     @Transactional
     public EmployeeResponseDTO update(Long id, EmployeeRequestDTO dto) {
-        User employee = findEntity(id);
-        validateEmailAvailability(dto.email(), id);
+        Collaborator employee = findEntity(id);
+        validateEmail(dto.email(), dto.isUser(), id);
         CNH cnh = buildCnh(dto);
+        Profile profile = findProfile(dto.profileId());
 
         employee.update(
                 dto.name(),
                 dto.email(),
                 dto.cellphoneNumber(),
                 dto.position(),
-                dto.userRole(),
+                dto.isUser(),
+                profile,
                 dto.admissionDate(),
                 cnh
         );
@@ -87,17 +93,17 @@ public class EmployeeService {
 
     @Transactional
     public void delete(Long id) {
-        User employee = findEntity(id);
+        Collaborator employee = findEntity(id);
         employee.deactivate();
         userRepository.save(employee);
     }
 
-    private User findEntity(Long id) {
+    private Collaborator findEntity(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
     }
 
-    private List<User> findEmployees(Position position, EmployeeStatus status) {
+    private List<Collaborator> findEmployees(Position position, EmployeeStatus status) {
         if (position == null && status == null) {
             return userRepository.findAll();
         }
@@ -114,7 +120,10 @@ public class EmployeeService {
                 : userRepository.findByPositionAndDisabledAtIsNotNull(position);
     }
 
-    private void validateEmailAvailability(String email, Long employeeId) {
+    private void validateEmail(String email, Boolean isUser, Long employeeId) {
+        if (Boolean.TRUE.equals(isUser) && email == null) {
+            throw new EmployeeValidationException("O e-mail é obrigatório para colaboradores com acesso ao sistema.");
+        }
         if (email == null) {
             return;
         }
@@ -124,6 +133,11 @@ public class EmployeeService {
                 .ifPresent(user -> {
                     throw new EmailAlreadyExistsException(email);
                 });
+    }
+
+    private Profile findProfile(Long profileId) {
+        return profileRepository.findById(profileId)
+                .orElseThrow(() -> new EmployeeValidationException("O perfil informado não existe."));
     }
 
     private static CNH buildCnh(EmployeeRequestDTO dto) {
@@ -139,7 +153,7 @@ public class EmployeeService {
         return new CNH(dto.cnhNumber().trim(), dto.cnhType());
     }
 
-    private static void applyStatus(User employee, EmployeeStatus status) {
+    private static void applyStatus(Collaborator employee, EmployeeStatus status) {
         if (status == EmployeeStatus.ACTIVE) {
             employee.activate();
         } else if (status == EmployeeStatus.INACTIVE) {

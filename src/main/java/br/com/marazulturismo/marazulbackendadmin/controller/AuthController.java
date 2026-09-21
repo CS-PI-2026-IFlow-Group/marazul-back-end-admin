@@ -5,7 +5,7 @@ import br.com.marazulturismo.marazulbackendadmin.dto.ResetPasswordRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.LoginResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.service.AuthService;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import br.com.marazulturismo.marazulbackendadmin.service.PasswordResetService;
@@ -42,13 +42,13 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
-        User user = authService.login(dto);
-        String token = jwtService.generateToken(user);
+        Collaborator collaborator = authService.login(dto);
+        String token = jwtService.generateToken(collaborator);
         return ResponseEntity.ok(new LoginResponseDTO(
                 token,
-                user.getId(),
-                user.getName(),
-                user.getEmail()
+                collaborator.getId(),
+                collaborator.getName(),
+                collaborator.getEmail()
         ));
     }
 

@@ -1,6 +1,5 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -74,7 +73,6 @@ class DashboardControllerDatabaseFailureTest {
         return Jwts.builder()
                 .subject("admin@marazul.test")
                 .claim("id", 1L)
-                .claim("role", UserRole.ADMIN.name())
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + 60L * 60 * 1000))
                 .signWith(key)

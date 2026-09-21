@@ -4,7 +4,7 @@ import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import br.com.marazulturismo.marazulbackendadmin.repository.PermissionRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.tuple;
 @Transactional
 class DataInitializerTest {
 
+    private static final String ADMIN_PROFILE_NAME = "Administrador";
+
     private static final Map<RequestMethod, String> FEATURE_BY_METHOD = Map.of(
             RequestMethod.POST, "create",
             RequestMethod.GET, "view",
@@ -43,7 +45,7 @@ class DataInitializerTest {
     private ProfileRepository profileRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    private CollaboratorRepository userRepository;
 
     @Autowired
     @Qualifier("requestMappingHandlerMapping")
@@ -121,6 +123,6 @@ class DataInitializerTest {
     }
 
     private Profile adminProfile() {
-        return profileRepository.findByName(DataInitializer.ADMIN_PROFILE_NAME).orElseThrow();
+        return profileRepository.findByName(ADMIN_PROFILE_NAME).orElseThrow();
     }
 }

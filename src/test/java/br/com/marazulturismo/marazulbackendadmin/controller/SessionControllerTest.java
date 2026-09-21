@@ -1,9 +1,9 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,20 +32,23 @@ class SessionControllerTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserRepository userRepository;
+    private CollaboratorRepository userRepository;
 
-    private User admin;
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    private Collaborator admin;
     private String token;
 
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
 
-        admin = userRepository.save(new User(
+        admin = userRepository.save(new Collaborator(
                 "Ana Souza",
                 new Date(),
                 Position.OTHER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "ana.souza@marazul.test",
                 null,
                 null,
@@ -107,11 +110,11 @@ class SessionControllerTest {
 
     @Test
     void me_ignoresIdSentAsRequestParameter() throws Exception {
-        User other = userRepository.save(new User(
+        Collaborator other = userRepository.save(new Collaborator(
                 "Bruno Lima",
                 new Date(),
                 Position.OTHER,
-                UserRole.ADMIN,
+                true, profileRepository.findByName("Administrador").orElseThrow(),
                 "bruno.lima@marazul.test",
                 null,
                 null,

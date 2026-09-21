@@ -1,6 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
-import br.com.marazulturismo.marazulbackendadmin.model.User;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -20,7 +20,7 @@ public class JwtService {
 
     private static final long EXPIRATION_MS = 8L * 60 * 60 * 1000; // 8 horas
 
-    public String generateToken(User user) {
+    public String generateToken(Collaborator user) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + EXPIRATION_MS);
 
@@ -28,7 +28,6 @@ public class JwtService {
                 .subject(user.getEmail())
                 .claim("id", user.getId())
                 .claim("nome", user.getName())
-                .claim("role", user.getUserRole().name())
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(getSigningKey())

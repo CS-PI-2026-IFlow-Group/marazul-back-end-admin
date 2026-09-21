@@ -4,13 +4,15 @@ import br.com.marazulturismo.marazulbackendadmin.dto.LoginRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.RegisterRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.SessionUserResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.enums.UserRole;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmailAlreadyExistsException;
+import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeValidationException;
 import br.com.marazulturismo.marazulbackendadmin.exception.InvalidCredentialsException;
 import br.com.marazulturismo.marazulbackendadmin.exception.UserNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
-import br.com.marazulturismo.marazulbackendadmin.model.User;
-import br.com.marazulturismo.marazulbackendadmin.repository.UserRepository;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Profile;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -22,16 +24,18 @@ import java.util.Date;
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
+    private final CollaboratorRepository userRepository;
+    private final ProfileRepository profileRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailSenderService emailSenderService;
     private final PasswordResetService passwordResetService;
     private final String definePasswordUrl;
 
-    public AuthService(UserRepository userRepository, 
+    public AuthService(CollaboratorRepository userRepository, ProfileRepository profileRepository,
         EmailSenderService emailSenderService, PasswordResetService passwordResetService, 
         @Value("${app.password-define.base-url}") String definePasswordUrl) {
         this.userRepository = userRepository;
+        this.profileRepository = profileRepository;
         this.emailSenderService = emailSenderService;
         this.passwordResetService = passwordResetService;
         this.definePasswordUrl = definePasswordUrl;
@@ -41,20 +45,24 @@ public class AuthService {
 
 
     public void register(RegisterRequestDTO dto) {
-        if (userRepository.existsByEmail(dto.email())) {
+        if (Boolean.TRUE.equals(dto.isUser()) && dto.email() == null) {
+            throw new EmployeeValidationException("O e-mail é obrigatório para colaboradores com acesso ao sistema.");
+        }
+        if (dto.email() != null && userRepository.existsByEmail(dto.email())) {
             throw new EmailAlreadyExistsException(dto.email());
         }
 
         Position position = dto.position() == Position.DRIVER ? Position.DRIVER : Position.OTHER;
-        CNH cnh = dto.cnhNumber() == null && dto.cnhType() == null
-                ? null
-                : new CNH(dto.cnhNumber(), dto.cnhType());
+        CNH cnh = buildCnh(dto);
 
-        User user = new User(
+        Profile profile = profileRepository.findById(dto.profileId())
+                .orElseThrow(() -> new EmployeeValidationException("O perfil informado não existe."));
+        Collaborator user = new Collaborator(
                 dto.name(),
                 new Date(),
                 position,
-                dto.userRole(),
+                dto.isUser(),
+                profile,
                 dto.email(),
                 dto.cellphoneNumber(),
                 cnh,
@@ -65,7 +73,7 @@ public class AuthService {
         userRepository.save(user);
         
 
-        if (user.getUserRole().equals(UserRole.ADMIN)){
+        if (Boolean.TRUE.equals(user.getIsUser())) {
 
             String token = passwordResetService.createResetToken(user);
             String redifineLink = buildUrl(token);
@@ -91,21 +99,27 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
-    public User login(LoginRequestDTO dto) {
-        User user = userRepository.findByEmail(dto.email())
+    public Collaborator login(LoginRequestDTO dto) {
+        Collaborator user = userRepository.findByEmail(dto.email())
                 .orElseThrow(InvalidCredentialsException::new);
+
+        if (!Boolean.TRUE.equals(user.getIsUser())) {
+            throw new InvalidCredentialsException();
+        }
 
         if (!passwordEncoder.matches(dto.senha(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
 
+        user.registerAccess();
+        userRepository.save(user);
         return user;
     }
 
 
     public void resendEmail(RegisterRequestDTO dto){
     userRepository.findByEmail(dto.email()).ifPresent(user -> {
-        if (user.getUserRole().equals(UserRole.ADMIN)) {
+        if (Boolean.TRUE.equals(user.getIsUser())) {
             String token = passwordResetService.createResetToken(user);
             String redefineLink = buildUrl(token);
 
@@ -131,5 +145,18 @@ public class AuthService {
         }
 
         return baseUrl + "/define-password?token=" + token;
+    }
+
+    private static CNH buildCnh(RegisterRequestDTO dto) {
+        if (dto.position() != Position.DRIVER) {
+            return null;
+        }
+
+        if (dto.cnhNumber() == null || dto.cnhNumber().isBlank() || dto.cnhType() == null) {
+            throw new EmployeeValidationException(
+                    "CNH e categoria da CNH são obrigatórias para funcionários motoristas.");
+        }
+
+        return new CNH(dto.cnhNumber().trim(), dto.cnhType());
     }
 }
