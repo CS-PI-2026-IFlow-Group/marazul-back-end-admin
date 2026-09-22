@@ -35,7 +35,9 @@ public class DataInitializer implements CommandLineRunner {
             new PermissionSeed("frota", "create"),
             new PermissionSeed("frota", "view"),
             new PermissionSeed("frota", "edit"),
-            new PermissionSeed("frota", "delete")
+            new PermissionSeed("frota", "delete"),
+            new PermissionSeed("perfis", "view"),
+            new PermissionSeed("permissoes", "view")
     );
 
     private final CollaboratorRepository userRepository;
