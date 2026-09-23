@@ -2,6 +2,7 @@ package br.com.marazulturismo.marazulbackendadmin.config;
 
 import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.repository.PermissionRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
@@ -70,6 +71,14 @@ class DataInitializerTest {
                         tuple("perfis", "view"),
                         tuple("permissoes", "view"));
         assertThat(adminProfile().getPermissions()).containsExactlyInAnyOrderElementsOf(permissions);
+    }
+
+    @Test
+    void startup_createsAdminWithSystemAccessAndAdminProfile() {
+        Collaborator admin = userRepository.findByEmail("admin@marazul.com.br").orElseThrow();
+
+        assertThat(admin.getIsUser()).isTrue();
+        assertThat(admin.getProfile().getName()).isEqualTo(ADMIN_PROFILE_NAME);
     }
 
     @Test

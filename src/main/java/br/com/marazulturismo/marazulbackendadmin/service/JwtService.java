@@ -1,6 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class JwtService {
@@ -28,6 +30,11 @@ public class JwtService {
                 .subject(user.getEmail())
                 .claim("id", user.getId())
                 .claim("nome", user.getName())
+                .claim("profile", user.getProfile().getName())
+                .claim("permissions", user.getProfile().getPermissions().stream()
+                        .map(Permission::getAuthority)
+                        .sorted()
+                        .toList())
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(getSigningKey())

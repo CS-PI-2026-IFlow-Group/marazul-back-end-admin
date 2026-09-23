@@ -7,12 +7,22 @@ import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface CollaboratorRepository extends JpaRepository<Collaborator, Long> {
 
     boolean existsByEmail(String email);
 
     Optional<Collaborator> findByEmail(String email);
+
+    @Query("""
+            SELECT DISTINCT collaborator
+            FROM Collaborator collaborator
+            JOIN FETCH collaborator.profile profile
+            LEFT JOIN FETCH profile.permissions
+            WHERE collaborator.email = :email
+            """)
+    Optional<Collaborator> findWithProfileAndPermissionsByEmail(@Param("email") String email);
 
     Optional<Collaborator> findByResetToken(String resetToken);
 

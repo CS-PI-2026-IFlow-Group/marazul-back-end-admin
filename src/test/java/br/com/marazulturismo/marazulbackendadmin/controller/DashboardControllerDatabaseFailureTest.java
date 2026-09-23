@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -73,6 +74,7 @@ class DashboardControllerDatabaseFailureTest {
         return Jwts.builder()
                 .subject("admin@marazul.test")
                 .claim("id", 1L)
+                .claim("permissions", List.of("dashboard:view"))
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + 60L * 60 * 1000))
                 .signWith(key)

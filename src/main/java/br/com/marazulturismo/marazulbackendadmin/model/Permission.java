@@ -27,4 +27,8 @@ public class Permission {
         this.baseRoute = baseRoute;
         this.feature = feature;
     }
+
+    public String getAuthority() {
+        return baseRoute + ":" + feature;
+    }
 }
