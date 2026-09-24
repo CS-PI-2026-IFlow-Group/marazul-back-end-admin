@@ -13,6 +13,7 @@ import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,7 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public List<ProfileResponseDTO> list() {
         return profileRepository.findAll().stream()
+                .sorted(Comparator.comparing(Profile::getName))
                 .map(ProfileResponseDTO::fromEntity)
                 .toList();
     }

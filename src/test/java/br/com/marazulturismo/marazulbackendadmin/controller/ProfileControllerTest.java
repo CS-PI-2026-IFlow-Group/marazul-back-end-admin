@@ -51,11 +51,12 @@ class ProfileControllerTest {
 
     private String token;
     private List<Permission> permissions;
+    private Profile adminProfile;
 
     @BeforeEach
     void setUp() {
         permissions = permissionRepository.findAll();
-        Profile adminProfile = profileRepository.findByName("Administrador").orElseThrow();
+        adminProfile = profileRepository.findByName("Administrador").orElseThrow();
         Collaborator admin = collaboratorRepository.save(new Collaborator(
                 "Admin Teste",
                 new Date(),
@@ -66,6 +67,7 @@ class ProfileControllerTest {
                 null,
                 null,
                 "hash-irrelevante"));
+
         token = "Bearer " + jwtService.generateToken(admin);
     }
 
@@ -91,8 +93,19 @@ class ProfileControllerTest {
 
         mockMvc.perform(get("/api/perfis").header("Authorization", token))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].name", hasItems("Administrador", "Operacao")))
                 .andExpect(jsonPath("$[*].nome", hasItems("Administrador", "Operacao")))
                 .andExpect(jsonPath("$[?(@.id == %d)].permissions", profile.getId()).isArray());
+    }
+
+    @Test
+    void list_returnsProfilesWithPermissionsInPermissoesFormat() throws Exception {
+        mockMvc.perform(get("/api/perfis").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Administrador')]").exists())
+                .andExpect(jsonPath("$[?(@.name=='Administrador')].permissions[0].id").exists())
+                .andExpect(jsonPath("$[?(@.name=='Administrador')].permissions[0].rotaBase").exists())
+                .andExpect(jsonPath("$[?(@.name=='Administrador')].permissions[0].funcionalidade").exists());
     }
 
     @Test
@@ -102,14 +115,27 @@ class ProfileControllerTest {
         mockMvc.perform(get("/api/perfis/{id}", profile.getId()).header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(profile.getId()))
+                .andExpect(jsonPath("$.name").value("Comercial"))
                 .andExpect(jsonPath("$.nome").value("Comercial"))
                 .andExpect(jsonPath("$.permissions.length()").value(2));
     }
 
     @Test
+    void findById_returnsProfileWithPermissions() throws Exception {
+        mockMvc.perform(get("/api/perfis/{id}", adminProfile.getId()).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(adminProfile.getId()))
+                .andExpect(jsonPath("$.name").value("Administrador"))
+                .andExpect(jsonPath("$.permissions[0].id").exists())
+                .andExpect(jsonPath("$.permissions[0].rotaBase").exists())
+                .andExpect(jsonPath("$.permissions[0].funcionalidade").exists());
+    }
+
+    @Test
     void findById_missing_returns404() throws Exception {
         mockMvc.perform(get("/api/perfis/{id}", 999999L).header("Authorization", token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").exists());
     }
 
     @Test
@@ -120,8 +146,18 @@ class ProfileControllerTest {
                         .content(validPayload("Financeiro")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.name").value("Financeiro"))
                 .andExpect(jsonPath("$.nome").value("Financeiro"))
                 .andExpect(jsonPath("$.permissions.length()").value(2));
+    }
+
+    @Test
+    void create_invalidPayload_returns400() throws Exception {
+        mockMvc.perform(post("/api/perfis")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -151,8 +187,18 @@ class ProfileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Operacao Regional"))
                 .andExpect(jsonPath("$.nome").value("Operacao Regional"))
                 .andExpect(jsonPath("$.permissions.length()").value(2));
+    }
+
+    @Test
+    void update_missing_returns404() throws Exception {
+        mockMvc.perform(put("/api/perfis/{id}", 999999L)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload("Nao Existe")))
+                .andExpect(status().isNotFound());
     }
 
     @Test

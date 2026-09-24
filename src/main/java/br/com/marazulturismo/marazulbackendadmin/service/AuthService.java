@@ -100,10 +100,10 @@ public class AuthService {
     }
 
     public Collaborator login(LoginRequestDTO dto) {
-        Collaborator user = userRepository.findByEmail(dto.email())
+        Collaborator user = userRepository.findWithProfileAndPermissionsByEmail(dto.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (!Boolean.TRUE.equals(user.getIsUser())) {
+        if (!Boolean.TRUE.equals(user.getIsUser()) || !user.isActive()) {
             throw new InvalidCredentialsException();
         }
 
