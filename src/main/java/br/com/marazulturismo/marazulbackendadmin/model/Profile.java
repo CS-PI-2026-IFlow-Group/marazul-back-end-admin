@@ -36,4 +36,10 @@ public class Profile {
     public boolean grantPermissions(Collection<Permission> permissions) {
         return this.permissions.addAll(permissions);
     }
+
+    public void update(String name, Collection<Permission> permissions) {
+        this.name = name;
+        this.permissions.clear();
+        this.permissions.addAll(permissions);
+    }
 }
