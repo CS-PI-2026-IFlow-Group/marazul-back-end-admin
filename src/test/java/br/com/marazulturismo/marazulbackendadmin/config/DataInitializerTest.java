@@ -66,7 +66,11 @@ class DataInitializerTest {
                         tuple("frota", "create"),
                         tuple("frota", "view"),
                         tuple("frota", "edit"),
-                        tuple("frota", "delete"));
+                        tuple("frota", "delete"),
+                        tuple("perfis", "create"),
+                        tuple("perfis", "view"),
+                        tuple("perfis", "edit"),
+                        tuple("perfis", "delete"));
         assertThat(adminProfile().getPermissions()).containsExactlyInAnyOrderElementsOf(permissions);
     }
 
