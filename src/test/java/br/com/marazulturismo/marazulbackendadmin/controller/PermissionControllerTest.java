@@ -65,7 +65,7 @@ class PermissionControllerTest {
     void list_returnsAllPermissionsWithExpectedFields() throws Exception {
         mockMvc.perform(get("/api/permissoes").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(11)))
+                .andExpect(jsonPath("$", hasSize(14)))
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].rotaBase").value("dashboard"))
                 .andExpect(jsonPath("$[0].funcionalidade").value("view"));

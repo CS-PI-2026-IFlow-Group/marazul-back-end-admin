@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,6 +36,8 @@ public interface CollaboratorRepository extends JpaRepository<Collaborator, Long
     List<Collaborator> findByPositionAndDisabledAtIsNull(Position position);
 
     List<Collaborator> findByPositionAndDisabledAtIsNotNull(Position position);
+
+    boolean existsByProfileAndDisabledAtIsNull(Profile profile);
 
     @Query("SELECT COUNT(c) FROM Collaborator c WHERE c.disabledAt IS NULL")
     long countActiveEmployees();

@@ -2,6 +2,7 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 
 import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Comparator;
 import java.util.List;
@@ -21,5 +22,10 @@ public record ProfileResponseDTO(
                 .toList();
 
         return new ProfileResponseDTO(profile.getId(), profile.getName(), permissions);
+    }
+
+    @JsonProperty("nome")
+    public String getNome() {
+        return name;
     }
 }
