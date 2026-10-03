@@ -1,36 +1,44 @@
 package br.com.marazulturismo.marazulbackendadmin.model;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-@Embeddable
+@Entity
+@Table(name = "addresses")
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Address {
 
-    protected Address() {
-    }
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    public Address(String street, String number, String complement, String city, String state) {
+    @Column(nullable = false)
+    private String street;
+
+    @Column(nullable = false)
+    private String number;
+
+    private String complement;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "cidade_id", nullable = false)
+    private City city;
+
+    public Address(String street, String number, String complement, City city) {
         this.street = street;
         this.number = number;
         this.complement = complement;
         this.city = city;
-        this.state = state;
     }
-
-    @Column(name = "address_street")
-    private String street;
-
-    @Column(name = "address_number")
-    private String number;
-
-    @Column(name = "address_complement")
-    private String complement;
-
-    @Column(name = "address_city")
-    private String city;
-
-    @Column(name = "address_state")
-    private String state;
 }
