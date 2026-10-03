@@ -45,6 +45,12 @@ public class Client {
         this.address = address;
     }
 
+    public void update(String name, String cpf, String cnpj) {
+        this.name = name;
+        this.cpf = cpf;
+        this.cnpj = cnpj;
+    }
+
     @PrePersist
     @PreUpdate
     private void normalizeAndValidateDocuments() {
