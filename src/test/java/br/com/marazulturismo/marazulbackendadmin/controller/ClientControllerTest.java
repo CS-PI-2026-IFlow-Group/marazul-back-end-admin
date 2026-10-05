@@ -5,6 +5,7 @@ import br.com.marazulturismo.marazulbackendadmin.model.Address;
 import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Client;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.AddressRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
@@ -24,6 +25,7 @@ import java.util.Date;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,6 +48,9 @@ class ClientControllerTest {
 
     @Autowired
     private ClientRepository clientRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
 
     @Autowired
     private CityRepository cityRepository;
@@ -166,6 +171,38 @@ class ClientControllerTest {
         mockMvc.perform(put("/api/clientes/{id}", client.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validCnpjPayload()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void delete_removesClientAndLinkedAddress() throws Exception {
+        Client client = persistClient("Cliente para Exclusão", "11144477735", null, "107");
+        Long clientId = client.getId();
+        Long addressId = client.getAddress().getId();
+
+        mockMvc.perform(delete("/api/clientes/{id}", clientId)
+                        .header("Authorization", token))
+                .andExpect(status().isNoContent());
+
+        entityManager.clear();
+
+        org.assertj.core.api.Assertions.assertThat(clientRepository.existsById(clientId)).isFalse();
+        org.assertj.core.api.Assertions.assertThat(addressRepository.existsById(addressId)).isFalse();
+    }
+
+    @Test
+    void delete_withUnknownClient_returns404() throws Exception {
+        mockMvc.perform(delete("/api/clientes/{id}", 999999)
+                        .header("Authorization", token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").value(containsString("Cliente não encontrado")));
+    }
+
+    @Test
+    void delete_withoutAuthentication_returns401() throws Exception {
+        Client client = persistClient("Cliente para Exclusão", "11144477735", null, "108");
+
+        mockMvc.perform(delete("/api/clientes/{id}", client.getId()))
                 .andExpect(status().isUnauthorized());
     }
 
