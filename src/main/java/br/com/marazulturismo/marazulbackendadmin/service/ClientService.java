@@ -5,8 +5,10 @@ import br.com.marazulturismo.marazulbackendadmin.dto.ClientRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientValidationException;
+import br.com.marazulturismo.marazulbackendadmin.model.Address;
 import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Client;
+import br.com.marazulturismo.marazulbackendadmin.repository.AddressRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
 import org.springframework.stereotype.Service;
@@ -16,10 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final AddressRepository addressRepository;
     private final CityRepository cityRepository;
 
-    public ClientService(ClientRepository clientRepository, CityRepository cityRepository) {
+    public ClientService(
+            ClientRepository clientRepository,
+            AddressRepository addressRepository,
+            CityRepository cityRepository) {
         this.clientRepository = clientRepository;
+        this.addressRepository = addressRepository;
         this.cityRepository = cityRepository;
     }
 
@@ -38,6 +45,17 @@ public class ClientService {
         updateAddress(client, dto.address(), city);
 
         return ClientResponseDTO.fromEntity(clientRepository.save(client));
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Client client = findEntity(id);
+        Address address = client.getAddress();
+
+        clientRepository.delete(client);
+        clientRepository.flush();
+        addressRepository.delete(address);
+        addressRepository.flush();
     }
 
     private void updateAddress(Client client, AddressRequestDTO address, City city) {
