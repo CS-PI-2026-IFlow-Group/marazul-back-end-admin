@@ -55,6 +55,10 @@ public class SecurityConfig {
                         .hasAuthority("frota:view")
                         .requestMatchers(HttpMethod.PUT, "/api/frota/**")
                         .hasAuthority("frota:edit")
+                        .requestMatchers(HttpMethod.PUT, "/api/clientes/**")
+                        .hasAuthority("clientes:edit")
+                        .requestMatchers(HttpMethod.DELETE, "/api/clientes/**")
+                        .hasAuthority("clientes:delete")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex ->
                         ex.authenticationEntryPoint(unauthorizedEntryPoint()))

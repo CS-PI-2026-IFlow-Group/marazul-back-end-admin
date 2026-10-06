@@ -111,6 +111,28 @@ class ClientRepositoryTest {
                 .containsExactlyInAnyOrder("João da Silva", "Empresa Silva");
     }
 
+    @Test
+    void update_reusesAddressAndSwitchesDocuments() {
+        Address address = persistAddress("109");
+        Client client = clientRepository.saveAndFlush(
+                new Client("Cliente Original", "12345678903", null, address));
+        Long addressId = address.getId();
+
+        address.update("Avenida Atualizada", "110", "Sala 2", city);
+        client.update("Empresa Atualizada", null, "12.345.678/0001-93");
+        clientRepository.saveAndFlush(client);
+        entityManager.clear();
+
+        Client updated = clientRepository.findById(client.getId()).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("Empresa Atualizada");
+        assertThat(updated.getCpf()).isNull();
+        assertThat(updated.getCnpj()).isEqualTo("12345678000193");
+        assertThat(updated.getAddress().getId()).isEqualTo(addressId);
+        assertThat(updated.getAddress().getStreet()).isEqualTo("Avenida Atualizada");
+        assertThat(updated.getAddress().getNumber()).isEqualTo("110");
+        assertThat(updated.getAddress().getComplement()).isEqualTo("Sala 2");
+    }
+
     private Address persistAddress(String number) {
         Address address = new Address("Rua das Flores", number, null, city);
         entityManager.persist(address);
