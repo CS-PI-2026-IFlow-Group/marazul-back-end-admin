@@ -65,7 +65,7 @@ class PermissionControllerTest {
     void list_returnsAllPermissionsWithExpectedFields() throws Exception {
         mockMvc.perform(get("/api/permissoes").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(14)))
+                .andExpect(jsonPath("$", hasSize(15)))
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].rotaBase").value("dashboard"))
                 .andExpect(jsonPath("$[0].funcionalidade").value("view"));
@@ -76,10 +76,12 @@ class PermissionControllerTest {
         mockMvc.perform(get("/api/permissoes").header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].rotaBase").value("dashboard"))
-                .andExpect(jsonPath("$[1].rotaBase").value("frota"))
-                .andExpect(jsonPath("$[1].funcionalidade").value("create"))
-                .andExpect(jsonPath("$[2].funcionalidade").value("delete"))
-                .andExpect(jsonPath("$[3].funcionalidade").value("edit"))
-                .andExpect(jsonPath("$[4].funcionalidade").value("view"));
+                .andExpect(jsonPath("$[1].rotaBase").value("enderecos"))
+                .andExpect(jsonPath("$[1].funcionalidade").value("view"))
+                .andExpect(jsonPath("$[2].rotaBase").value("funcionario"))
+                .andExpect(jsonPath("$[2].funcionalidade").value("create"))
+                .andExpect(jsonPath("$[3].funcionalidade").value("delete"))
+                .andExpect(jsonPath("$[4].funcionalidade").value("edit"))
+                .andExpect(jsonPath("$[5].funcionalidade").value("view"));
     }
 }
