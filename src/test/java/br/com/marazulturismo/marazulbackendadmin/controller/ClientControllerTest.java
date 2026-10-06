@@ -2,8 +2,11 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.model.Address;
+import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Client;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.AddressRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
@@ -47,6 +50,12 @@ class ClientControllerTest {
 
     @Autowired
     private ClientRepository clientRepository;
+
+    @Autowired
+    private CityRepository cityRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
 
     private String token;
 
@@ -120,7 +129,7 @@ class ClientControllerTest {
                   "address": {
                     "street": "Rua Central",
                     "number": "500",
-                    "city": "Búzios",
+                    "city": "Armação dos Búzios",
                     "state": "RJ"
                   }
                 }
@@ -134,6 +143,29 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.name", is("Turismo Brasil Ltda")))
                 .andExpect(jsonPath("$.cnpj", is(VALID_CNPJ_CLEAN)))
                 .andExpect(jsonPath("$.cpf").value(nullValue()));
+    }
+
+    @Test
+    void createWithUnknownCity_BadRequest() throws Exception {
+        String payload = """
+                {
+                  "name": "Maria Silva",
+                  "cpf": "%s",
+                  "address": {
+                    "street": "Av. Brasil",
+                    "number": "120",
+                    "city": "Cidade Inexistente",
+                    "state": "RJ"
+                  }
+                }
+                """.formatted(VALID_CPF_CLEAN);
+
+        mockMvc.perform(post("/api/clientes")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Cidade e UF não encontradas."));
     }
 
     @Test
@@ -192,7 +224,9 @@ class ClientControllerTest {
     @Test
     @DisplayName("Deve rejeitar quando CPF já estiver cadastrado")
     void createWithDuplicateCpf_BadRequest() throws Exception {
-        clientRepository.save(new Client("Existente", VALID_CPF_CLEAN, null, null));
+        Address address = addressRepository.save(new Address(
+                "Rua 1", "10", null, city("Cabo Frio")));
+        clientRepository.save(new Client("Existente", VALID_CPF_CLEAN, null, address));
 
         String payload = """
                 {
@@ -212,7 +246,7 @@ class ClientControllerTest {
     @Test
     @DisplayName("Deve listar clientes com resumo de endereço (cidade e sigla do estado)")
     void listClients_Success() throws Exception {
-        Address addr = new Address("Rua 1", "10", null, "Arraial do Cabo", "RJ");
+        Address addr = addressRepository.save(new Address("Rua 1", "10", null, city("Arraial do Cabo")));
         clientRepository.save(new Client("João Pereira", VALID_CPF_CLEAN, null, addr));
 
         mockMvc.perform(get("/api/clientes")
@@ -227,8 +261,8 @@ class ClientControllerTest {
     @Test
     @DisplayName("Deve filtrar clientes pelo parâmetro opcional busca por nome, CPF ou CNPJ ignorando formatação")
     void searchClients_Success() throws Exception {
-        Address addr1 = new Address("Rua 1", "10", null, "Cabo Frio", "RJ");
-        Address addr2 = new Address("Rua 2", "20", null, "Búzios", "RJ");
+        Address addr1 = addressRepository.save(new Address("Rua 1", "10", null, city("Cabo Frio")));
+        Address addr2 = addressRepository.save(new Address("Rua 2", "20", null, city("Armação dos Búzios")));
 
         clientRepository.save(new Client("Carlos Silva", VALID_CPF_CLEAN, null, addr1));
         clientRepository.save(new Client("Empresa ABC", null, VALID_CNPJ_CLEAN, addr2));
@@ -251,7 +285,8 @@ class ClientControllerTest {
     @Test
     @DisplayName("Deve obter detalhes completos do cliente por ID")
     void findById_Success() throws Exception {
-        Address addr = new Address("Av. Beira Mar", "99", "Bloco B", "Arraial", "RJ");
+        Address addr = addressRepository.save(new Address(
+                "Av. Beira Mar", "99", "Bloco B", city("Arraial do Cabo")));
         Client saved = clientRepository.save(new Client("Ana Paula", VALID_CPF_CLEAN, null, addr));
 
         mockMvc.perform(get("/api/clientes/" + saved.getId())
@@ -262,7 +297,7 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.address.street", is("Av. Beira Mar")))
                 .andExpect(jsonPath("$.address.number", is("99")))
                 .andExpect(jsonPath("$.address.complement", is("Bloco B")))
-                .andExpect(jsonPath("$.address.city", is("Arraial")))
+                .andExpect(jsonPath("$.address.city", is("Arraial do Cabo")))
                 .andExpect(jsonPath("$.address.state", is("RJ")));
     }
 
@@ -280,5 +315,10 @@ class ClientControllerTest {
     void unauthorizedAccess() throws Exception {
         mockMvc.perform(get("/api/clientes"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    private City city(String name) {
+        return cityRepository.findByNameIgnoreCaseAndStateAcronymIgnoreCase(name, "RJ")
+                .orElseThrow();
     }
 }
