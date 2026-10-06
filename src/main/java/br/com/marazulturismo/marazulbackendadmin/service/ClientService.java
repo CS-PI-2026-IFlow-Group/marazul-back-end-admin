@@ -7,21 +7,28 @@ import br.com.marazulturismo.marazulbackendadmin.dto.ClientRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientValidationException;
 import br.com.marazulturismo.marazulbackendadmin.model.Address;
+import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Client;
+import br.com.marazulturismo.marazulbackendadmin.repository.AddressRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Locale;
 
 @Service
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final CityRepository cityRepository;
+    private final AddressRepository addressRepository;
 
-    public ClientService(ClientRepository clientRepository) {
+    public ClientService(ClientRepository clientRepository, CityRepository cityRepository,
+                         AddressRepository addressRepository) {
         this.clientRepository = clientRepository;
+        this.cityRepository = cityRepository;
+        this.addressRepository = addressRepository;
     }
 
     @Transactional(readOnly = true)
@@ -53,6 +60,7 @@ public class ClientService {
         validateDocuments(cpf, cnpj, null);
 
         Address address = buildAddress(dto.address());
+        addressRepository.save(address);
 
         Client client = new Client(dto.name(), cpf, cnpj, address);
 
@@ -177,14 +185,16 @@ public class ClientService {
 
     private Address buildAddress(AddressRequestDTO dto) {
         if (dto == null) {
-            return null;
+            throw new ClientValidationException("O endereço é obrigatório.");
         }
+        City city = cityRepository.findByNameIgnoreCaseAndStateAcronymIgnoreCase(
+                        dto.city().trim(), dto.state().trim())
+                .orElseThrow(() -> new ClientValidationException("Cidade e UF não encontradas."));
         return new Address(
                 dto.street(),
                 dto.number(),
                 dto.complement(),
-                dto.city(),
-                dto.state() != null ? dto.state().toUpperCase(Locale.ROOT) : null
+                city
         );
     }
 

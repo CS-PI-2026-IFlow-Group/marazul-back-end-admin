@@ -18,8 +18,8 @@ public record ClientDetailResponseDTO(
                     client.getAddress().getStreet(),
                     client.getAddress().getNumber(),
                     client.getAddress().getComplement(),
-                    client.getAddress().getCity(),
-                    client.getAddress().getState()
+                    client.getAddress().getCity().getName(),
+                    client.getAddress().getCity().getState().getAcronym()
             );
         }
 

@@ -15,8 +15,8 @@ public record ClientListResponseDTO(
         String state = null;
 
         if (client.getAddress() != null) {
-            city = client.getAddress().getCity();
-            state = client.getAddress().getState();
+            city = client.getAddress().getCity().getName();
+            state = client.getAddress().getCity().getState().getAcronym();
         }
 
         return new ClientListResponseDTO(
