@@ -2,7 +2,7 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 
 import br.com.marazulturismo.marazulbackendadmin.model.Client;
 
-public record ClientDetailResponseDTO(
+public record ClientResponseDTO(
         Long id,
         String name,
         String cpf,
@@ -10,16 +10,12 @@ public record ClientDetailResponseDTO(
         AddressResponseDTO address
 ) {
 
-    public static ClientDetailResponseDTO fromEntity(Client client) {
-        AddressResponseDTO addressDto = client.getAddress() == null
-                ? null : AddressResponseDTO.fromEntity(client.getAddress());
-
-        return new ClientDetailResponseDTO(
+    public static ClientResponseDTO fromEntity(Client client) {
+        return new ClientResponseDTO(
                 client.getId(),
                 client.getName(),
                 client.getCpf(),
                 client.getCnpj(),
-                addressDto
-        );
+                AddressResponseDTO.fromEntity(client.getAddress()));
     }
 }

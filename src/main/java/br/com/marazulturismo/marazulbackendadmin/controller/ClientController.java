@@ -3,13 +3,16 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientDetailResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ClientResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.service.ClientService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,8 +31,7 @@ public class ClientController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClientListResponseDTO>> list(
-            @RequestParam(required = false) String busca) {
+    public ResponseEntity<List<ClientListResponseDTO>> list(@RequestParam(required = false) String busca) {
         return ResponseEntity.ok(clientService.list(busca));
     }
 
@@ -41,5 +43,18 @@ public class ClientController {
     @PostMapping
     public ResponseEntity<ClientDetailResponseDTO> create(@RequestBody @Valid ClientRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(clientService.create(dto));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ClientResponseDTO> update(
+            @PathVariable Long id,
+            @RequestBody @Valid ClientRequestDTO dto) {
+        return ResponseEntity.ok(clientService.update(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        clientService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

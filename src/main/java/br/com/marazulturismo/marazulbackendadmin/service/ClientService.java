@@ -4,6 +4,7 @@ import br.com.marazulturismo.marazulbackendadmin.dto.AddressRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientDetailResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ClientResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientValidationException;
 import br.com.marazulturismo.marazulbackendadmin.model.Address;
@@ -21,30 +22,28 @@ import java.util.List;
 public class ClientService {
 
     private final ClientRepository clientRepository;
-    private final CityRepository cityRepository;
     private final AddressRepository addressRepository;
+    private final CityRepository cityRepository;
 
-    public ClientService(ClientRepository clientRepository, CityRepository cityRepository,
-                         AddressRepository addressRepository) {
+    public ClientService(
+            ClientRepository clientRepository,
+            AddressRepository addressRepository,
+            CityRepository cityRepository) {
         this.clientRepository = clientRepository;
-        this.cityRepository = cityRepository;
         this.addressRepository = addressRepository;
+        this.cityRepository = cityRepository;
     }
 
     @Transactional(readOnly = true)
     public List<ClientListResponseDTO> list(String search) {
         List<Client> clients;
-
         if (search == null || search.isBlank()) {
             clients = clientRepository.findAll();
         } else {
             String digitsOnly = search.replaceAll("\\D", "");
             clients = clientRepository.searchByNameOrDocument(search, digitsOnly);
         }
-
-        return clients.stream()
-                .map(ClientListResponseDTO::fromEntity)
-                .toList();
+        return clients.stream().map(ClientListResponseDTO::fromEntity).toList();
     }
 
     @Transactional(readOnly = true)
@@ -56,36 +55,79 @@ public class ClientService {
     public ClientDetailResponseDTO create(ClientRequestDTO dto) {
         String cpf = ClientRequestDTO.normalizeDocument(dto.cpf());
         String cnpj = ClientRequestDTO.normalizeDocument(dto.cnpj());
-
         validateDocuments(cpf, cnpj, null);
 
-        Address address = buildAddress(dto.address());
-        addressRepository.save(address);
-
-        Client client = new Client(dto.name(), cpf, cnpj, address);
-
-        return ClientDetailResponseDTO.fromEntity(clientRepository.save(client));
+        City city = findCity(dto.address());
+        Address address = addressRepository.save(new Address(
+                dto.address().street(), dto.address().number(), dto.address().complement(), city));
+        Client client = clientRepository.save(new Client(dto.name().trim(), cpf, cnpj, address));
+        return ClientDetailResponseDTO.fromEntity(client);
     }
 
-    private void validateDocuments(String cpf, String cnpj, Long excludeId) {
-        boolean hasCpf = cpf != null && !cpf.isBlank();
-        boolean hasCnpj = cnpj != null && !cnpj.isBlank();
+    @Transactional
+    public ClientResponseDTO update(Long id, ClientRequestDTO dto) {
+        Client client = findEntity(id);
+        String cpf = ClientRequestDTO.normalizeDocument(dto.cpf());
+        String cnpj = ClientRequestDTO.normalizeDocument(dto.cnpj());
+
+        validateDocuments(cpf, cnpj, id);
+
+        City city = findCity(dto.address());
+
+        client.update(dto.name().trim(), cpf, cnpj);
+        updateAddress(client, dto.address(), city);
+
+        return ClientResponseDTO.fromEntity(clientRepository.save(client));
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Client client = findEntity(id);
+        Address address = client.getAddress();
+
+        clientRepository.delete(client);
+        clientRepository.flush();
+        addressRepository.delete(address);
+        addressRepository.flush();
+    }
+
+    private void updateAddress(Client client, AddressRequestDTO address, City city) {
+        client.getAddress().update(
+                address.street(),
+                address.number(),
+                address.complement(),
+                city);
+    }
+
+    private City findCity(AddressRequestDTO address) {
+        if (address.cityId() != null) {
+            return cityRepository.findById(address.cityId())
+                    .orElseThrow(() -> new ClientValidationException("Cidade não encontrada."));
+        }
+        return cityRepository.findByNameIgnoreCaseAndStateAcronymIgnoreCase(
+                        address.city().trim(), address.state().trim())
+                .orElseThrow(() -> new ClientValidationException("Cidade e UF não encontradas."));
+    }
+
+    private void validateDocuments(String cpf, String cnpj, Long clientId) {
+        boolean hasCpf = cpf != null;
+        boolean hasCnpj = cnpj != null;
 
         if (hasCpf && hasCnpj) {
             throw new ClientValidationException("Informe apenas CPF ou CNPJ, não ambos.");
         }
-
-        if (!hasCpf && !hasCnpj) {
-            throw new ClientValidationException("É obrigatório informar CPF ou CNPJ.");
+        if (!hasCpf) {
+            if (!hasCnpj) {
+                throw new ClientValidationException("É obrigatório informar CPF ou CNPJ.");
+            }
         }
 
         if (hasCpf) {
             validateCpf(cpf);
 
-            boolean exists = excludeId == null
+            boolean exists = clientId == null
                     ? clientRepository.existsByCpf(cpf)
-                    : clientRepository.existsByCpfAndIdNot(cpf, excludeId);
-
+                    : clientRepository.existsByCpfAndIdNot(cpf, clientId);
             if (exists) {
                 throw new ClientValidationException("CPF já cadastrado: " + cpf);
             }
@@ -94,108 +136,63 @@ public class ClientService {
         if (hasCnpj) {
             validateCnpj(cnpj);
 
-            boolean exists = excludeId == null
+            boolean exists = clientId == null
                     ? clientRepository.existsByCnpj(cnpj)
-                    : clientRepository.existsByCnpjAndIdNot(cnpj, excludeId);
-
+                    : clientRepository.existsByCnpjAndIdNot(cnpj, clientId);
             if (exists) {
                 throw new ClientValidationException("CNPJ já cadastrado: " + cnpj);
             }
         }
     }
 
-    /**
-     * Validação algorítmica do CPF (11 dígitos, cálculo dos dígitos verificadores).
-     */
-    private void validateCpf(String cpf) {
-        if (cpf.length() != 11) {
-            throw new ClientValidationException("CPF deve conter 11 dígitos.");
-        }
-
-        // Rejeita CPFs com todos os dígitos iguais (ex: 111.111.111-11)
-        if (cpf.chars().distinct().count() == 1) {
+    private static void validateCpf(String cpf) {
+        if (cpf.length() != 11 || cpf.chars().distinct().count() == 1) {
             throw new ClientValidationException("CPF inválido.");
         }
 
-        int[] digits = cpf.chars().map(c -> c - '0').toArray();
+        int[] digits = cpf.chars().map(character -> character - '0').toArray();
+        int firstCheckDigit = calculateCheckDigit(digits, 9, 10);
+        int secondCheckDigit = calculateCheckDigit(digits, 10, 11);
 
-        // Primeiro dígito verificador
-        int sum = 0;
-        for (int i = 0; i < 9; i++) {
-            sum += digits[i] * (10 - i);
-        }
-        int firstCheck = 11 - (sum % 11);
-        if (firstCheck >= 10) firstCheck = 0;
-
-        if (digits[9] != firstCheck) {
-            throw new ClientValidationException("CPF inválido.");
-        }
-
-        // Segundo dígito verificador
-        sum = 0;
-        for (int i = 0; i < 10; i++) {
-            sum += digits[i] * (11 - i);
-        }
-        int secondCheck = 11 - (sum % 11);
-        if (secondCheck >= 10) secondCheck = 0;
-
-        if (digits[10] != secondCheck) {
+        if (digits[9] != firstCheckDigit || digits[10] != secondCheckDigit) {
             throw new ClientValidationException("CPF inválido.");
         }
     }
 
-    /**
-     * Validação algorítmica do CNPJ (14 dígitos, cálculo dos dígitos verificadores).
-     */
-    private void validateCnpj(String cnpj) {
-        if (cnpj.length() != 14) {
-            throw new ClientValidationException("CNPJ deve conter 14 dígitos.");
-        }
-
-        if (cnpj.chars().distinct().count() == 1) {
-            throw new ClientValidationException("CNPJ inválido.");
-        }
-
-        int[] digits = cnpj.chars().map(c -> c - '0').toArray();
-
-        // Primeiro dígito verificador
-        int[] weights1 = {5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
+    private static int calculateCheckDigit(int[] digits, int length, int initialWeight) {
         int sum = 0;
-        for (int i = 0; i < 12; i++) {
-            sum += digits[i] * weights1[i];
-        }
-        int firstCheck = sum % 11 < 2 ? 0 : 11 - (sum % 11);
 
-        if (digits[12] != firstCheck) {
+        for (int index = 0; index < length; index++) {
+            sum += digits[index] * (initialWeight - index);
+        }
+
+        int checkDigit = 11 - (sum % 11);
+        return checkDigit >= 10 ? 0 : checkDigit;
+    }
+
+    private static void validateCnpj(String cnpj) {
+        if (cnpj.length() != 14 || cnpj.chars().distinct().count() == 1) {
             throw new ClientValidationException("CNPJ inválido.");
         }
 
-        // Segundo dígito verificador
-        int[] weights2 = {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
-        sum = 0;
-        for (int i = 0; i < 13; i++) {
-            sum += digits[i] * weights2[i];
-        }
-        int secondCheck = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+        int[] digits = cnpj.chars().map(character -> character - '0').toArray();
+        int firstCheckDigit = calculateCnpjCheckDigit(digits, 12, new int[]{5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2});
+        int secondCheckDigit = calculateCnpjCheckDigit(digits, 13, new int[]{6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2});
 
-        if (digits[13] != secondCheck) {
+        if (digits[12] != firstCheckDigit || digits[13] != secondCheckDigit) {
             throw new ClientValidationException("CNPJ inválido.");
         }
     }
 
-    private Address buildAddress(AddressRequestDTO dto) {
-        if (dto == null) {
-            throw new ClientValidationException("O endereço é obrigatório.");
+    private static int calculateCnpjCheckDigit(int[] digits, int length, int[] weights) {
+        int sum = 0;
+
+        for (int index = 0; index < length; index++) {
+            sum += digits[index] * weights[index];
         }
-        City city = cityRepository.findByNameIgnoreCaseAndStateAcronymIgnoreCase(
-                        dto.city().trim(), dto.state().trim())
-                .orElseThrow(() -> new ClientValidationException("Cidade e UF não encontradas."));
-        return new Address(
-                dto.street(),
-                dto.number(),
-                dto.complement(),
-                city
-        );
+
+        int remainder = sum % 11;
+        return remainder < 2 ? 0 : 11 - remainder;
     }
 
     private Client findEntity(Long id) {
