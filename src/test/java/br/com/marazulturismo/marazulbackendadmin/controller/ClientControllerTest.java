@@ -24,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -77,6 +80,42 @@ class ClientControllerTest {
                 "hash-irrelevante"));
 
         token = "Bearer " + jwtService.generateToken(admin);
+    }
+
+    @Test
+    void createAndReadClient_withCityId() throws Exception {
+        String payload = """
+                {
+                  "name": "Cliente Consulta",
+                  "cpf": "529.982.247-25",
+                  "address": {
+                    "street": "Rua das Flores",
+                    "number": "42",
+                    "cityId": %d
+                  }
+                }
+                """.formatted(city.getId());
+
+        mockMvc.perform(post("/api/clientes")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.cpf").value("52998224725"))
+                .andExpect(jsonPath("$.address.cityId").value(city.getId()))
+                .andExpect(jsonPath("$.address.city").value(city.getName()))
+                .andExpect(jsonPath("$.address.state").value(city.getState().getAcronym()));
+
+        mockMvc.perform(get("/api/clientes").param("busca", "529.982")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name").value("Cliente Consulta"));
+
+        Long id = clientRepository.findAll().get(0).getId();
+        mockMvc.perform(get("/api/clientes/{id}", id).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.address.city").value(city.getName()));
     }
 
     @Test

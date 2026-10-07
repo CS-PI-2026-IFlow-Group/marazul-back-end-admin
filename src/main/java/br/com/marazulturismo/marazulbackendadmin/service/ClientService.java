@@ -1,6 +1,8 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.AddressRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ClientDetailResponseDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ClientListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ClientResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
@@ -13,6 +15,8 @@ import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class ClientService {
@@ -30,6 +34,36 @@ public class ClientService {
         this.cityRepository = cityRepository;
     }
 
+    @Transactional(readOnly = true)
+    public List<ClientListResponseDTO> list(String search) {
+        List<Client> clients;
+        if (search == null || search.isBlank()) {
+            clients = clientRepository.findAll();
+        } else {
+            String digitsOnly = search.replaceAll("\\D", "");
+            clients = clientRepository.searchByNameOrDocument(search, digitsOnly);
+        }
+        return clients.stream().map(ClientListResponseDTO::fromEntity).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ClientDetailResponseDTO findById(Long id) {
+        return ClientDetailResponseDTO.fromEntity(findEntity(id));
+    }
+
+    @Transactional
+    public ClientDetailResponseDTO create(ClientRequestDTO dto) {
+        String cpf = ClientRequestDTO.normalizeDocument(dto.cpf());
+        String cnpj = ClientRequestDTO.normalizeDocument(dto.cnpj());
+        validateDocuments(cpf, cnpj, null);
+
+        City city = findCity(dto.address());
+        Address address = addressRepository.save(new Address(
+                dto.address().street(), dto.address().number(), dto.address().complement(), city));
+        Client client = clientRepository.save(new Client(dto.name().trim(), cpf, cnpj, address));
+        return ClientDetailResponseDTO.fromEntity(client);
+    }
+
     @Transactional
     public ClientResponseDTO update(Long id, ClientRequestDTO dto) {
         Client client = findEntity(id);
@@ -38,8 +72,7 @@ public class ClientService {
 
         validateDocuments(cpf, cnpj, id);
 
-        City city = cityRepository.findById(dto.address().cityId())
-                .orElseThrow(() -> new ClientValidationException("Cidade não encontrada."));
+        City city = findCity(dto.address());
 
         client.update(dto.name().trim(), cpf, cnpj);
         updateAddress(client, dto.address(), city);
@@ -66,18 +99,36 @@ public class ClientService {
                 city);
     }
 
+    private City findCity(AddressRequestDTO address) {
+        if (address.cityId() != null) {
+            return cityRepository.findById(address.cityId())
+                    .orElseThrow(() -> new ClientValidationException("Cidade não encontrada."));
+        }
+        return cityRepository.findByNameIgnoreCaseAndStateAcronymIgnoreCase(
+                        address.city().trim(), address.state().trim())
+                .orElseThrow(() -> new ClientValidationException("Cidade e UF não encontradas."));
+    }
+
     private void validateDocuments(String cpf, String cnpj, Long clientId) {
         boolean hasCpf = cpf != null;
         boolean hasCnpj = cnpj != null;
 
-        if (hasCpf == hasCnpj) {
-            throw new ClientValidationException("Informe somente CPF ou CNPJ para o cliente.");
+        if (hasCpf && hasCnpj) {
+            throw new ClientValidationException("Informe apenas CPF ou CNPJ, não ambos.");
+        }
+        if (!hasCpf) {
+            if (!hasCnpj) {
+                throw new ClientValidationException("É obrigatório informar CPF ou CNPJ.");
+            }
         }
 
         if (hasCpf) {
             validateCpf(cpf);
 
-            if (clientRepository.existsByCpfAndIdNot(cpf, clientId)) {
+            boolean exists = clientId == null
+                    ? clientRepository.existsByCpf(cpf)
+                    : clientRepository.existsByCpfAndIdNot(cpf, clientId);
+            if (exists) {
                 throw new ClientValidationException("CPF já cadastrado: " + cpf);
             }
         }
@@ -85,7 +136,10 @@ public class ClientService {
         if (hasCnpj) {
             validateCnpj(cnpj);
 
-            if (clientRepository.existsByCnpjAndIdNot(cnpj, clientId)) {
+            boolean exists = clientId == null
+                    ? clientRepository.existsByCnpj(cnpj)
+                    : clientRepository.existsByCnpjAndIdNot(cnpj, clientId);
+            if (exists) {
                 throw new ClientValidationException("CNPJ já cadastrado: " + cnpj);
             }
         }

@@ -29,7 +29,6 @@ public record ClientRequestDTO(
         if (document == null || document.isBlank()) {
             return null;
         }
-
         return document.replaceAll("\\D", "");
     }
 }

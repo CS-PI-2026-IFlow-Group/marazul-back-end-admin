@@ -59,6 +59,10 @@ public class SecurityConfig {
                         .hasAuthority("clientes:edit")
                         .requestMatchers(HttpMethod.DELETE, "/api/clientes/**")
                         .hasAuthority("clientes:delete")
+                        .requestMatchers(HttpMethod.POST, "/api/clientes/**")
+                        .hasAuthority("clientes:create")
+                        .requestMatchers(HttpMethod.GET, "/api/clientes/**")
+                        .hasAuthority("clientes:view")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex ->
                         ex.authenticationEntryPoint(unauthorizedEntryPoint()))

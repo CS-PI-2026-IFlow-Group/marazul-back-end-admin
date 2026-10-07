@@ -7,7 +7,9 @@ public record AddressResponseDTO(
         String street,
         String number,
         String complement,
-        Long cityId
+        Long cityId,
+        String city,
+        String state
 ) {
 
     public static AddressResponseDTO fromEntity(Address address) {
@@ -16,6 +18,8 @@ public record AddressResponseDTO(
                 address.getStreet(),
                 address.getNumber(),
                 address.getComplement(),
-                address.getCity().getId());
+                address.getCity().getId(),
+                address.getCity().getName(),
+                address.getCity().getState().getAcronym());
     }
 }
