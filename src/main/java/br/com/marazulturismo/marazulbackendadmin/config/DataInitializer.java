@@ -44,7 +44,9 @@ public class DataInitializer implements CommandLineRunner {
             new PermissionSeed("perfis", "delete"),
             new PermissionSeed("permissoes", "view"),
             new PermissionSeed("clientes", "create"),
-            new PermissionSeed("clientes", "view")
+            new PermissionSeed("clientes", "view"),
+            new PermissionSeed("estados", "view"),
+            new PermissionSeed("cidades", "view")
     );
 
     private final CollaboratorRepository userRepository;
