@@ -13,12 +13,16 @@ public interface PassengerRepository extends JpaRepository<Passenger, Long> {
 
     boolean existsByCpfAndIdNot(String cpf, Long id);
 
+    List<Passenger> findAllByOrderByNameAsc();
+
     @Query("""
             SELECT passenger
             FROM Passenger passenger
-            WHERE UPPER(passenger.name) LIKE UPPER(CONCAT('%', :term, '%'))
-               OR UPPER(passenger.cpf) LIKE UPPER(CONCAT('%', :term, '%'))
+            WHERE UPPER(passenger.name) LIKE UPPER(CONCAT('%', :search, '%'))
+               OR (:digitsOnly IS NOT NULL AND :digitsOnly != ''
+                   AND passenger.cpf LIKE CONCAT('%', :digitsOnly, '%'))
             ORDER BY passenger.name ASC
             """)
-    List<Passenger> searchByNameOrCpf(@Param("term") String term);
+    List<Passenger> searchByNameOrDocument(@Param("search") String search,
+                                           @Param("digitsOnly") String digitsOnly);
 }
