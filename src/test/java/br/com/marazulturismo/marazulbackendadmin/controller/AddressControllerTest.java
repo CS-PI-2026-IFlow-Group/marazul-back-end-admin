@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,8 +24,10 @@ import java.util.Date;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -128,11 +131,90 @@ class AddressControllerTest {
                 .andExpect(status().isMethodNotAllowed());
     }
 
+    @Test
+    void update_changesAddressFields() throws Exception {
+        Client client = persistClientWithAddress();
+        Long addressId = client.getAddress().getId();
+
+        mockMvc.perform(put("/api/enderecos/{id}", addressId)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validAddressPayload()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(addressId))
+                .andExpect(jsonPath("$.street").value("Avenida Atualizada"))
+                .andExpect(jsonPath("$.number").value("200"))
+                .andExpect(jsonPath("$.complement").value("Sala 10"))
+                .andExpect(jsonPath("$.cityId").value(city.getId()));
+    }
+
+    @Test
+    void update_withMissingStreet_returns400() throws Exception {
+        Client client = persistClientWithAddress();
+        String payload = validAddressPayload().replace("\"street\": \"Avenida Atualizada\",", "");
+
+        mockMvc.perform(put("/api/enderecos/{id}", client.getAddress().getId())
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.street").value("A rua é obrigatória."));
+    }
+
+    @Test
+    void update_withUnknownCity_returns400() throws Exception {
+        Client client = persistClientWithAddress();
+        String payload = validAddressPayload().replace("\"cityId\": " + city.getId(), "\"cityId\": 999999");
+
+        mockMvc.perform(put("/api/enderecos/{id}", client.getAddress().getId())
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value("Cidade não encontrada."));
+    }
+
+    @Test
+    void delete_withLinkedClient_returns400AndKeepsAddress() throws Exception {
+        Client client = persistClientWithAddress();
+        Long addressId = client.getAddress().getId();
+
+        mockMvc.perform(delete("/api/enderecos/{id}", addressId)
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("vinculado a um cliente")));
+
+        org.assertj.core.api.Assertions.assertThat(addressRepository.existsById(addressId)).isTrue();
+    }
+
+    @Test
+    void delete_withoutLinkedClient_removesAddress() throws Exception {
+        Address address = addressRepository.saveAndFlush(
+                new Address("Rua Sem Cliente", "101", null, city));
+
+        mockMvc.perform(delete("/api/enderecos/{id}", address.getId())
+                        .header("Authorization", token))
+                .andExpect(status().isNoContent());
+
+        org.assertj.core.api.Assertions.assertThat(addressRepository.existsById(address.getId())).isFalse();
+    }
+
     private Client persistClientWithAddress() {
         Address address = addressRepository.saveAndFlush(
                 new Address("Rua das Flores", "100", "Casa", city));
 
         return clientRepository.saveAndFlush(
                 new Client("Cliente de Endereço", "111.444.777-35", null, address));
+    }
+
+    private String validAddressPayload() {
+        return """
+                {
+                  "street": "Avenida Atualizada",
+                  "number": "200",
+                  "complement": "Sala 10",
+                  "cityId": %d
+                }
+                """.formatted(city.getId());
     }
 }

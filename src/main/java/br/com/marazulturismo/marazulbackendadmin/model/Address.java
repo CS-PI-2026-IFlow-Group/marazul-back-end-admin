@@ -41,4 +41,11 @@ public class Address {
         this.complement = complement;
         this.city = city;
     }
+
+    public void update(String street, String number, String complement, City city) {
+        this.street = street;
+        this.number = number;
+        this.complement = complement;
+        this.city = city;
+    }
 }

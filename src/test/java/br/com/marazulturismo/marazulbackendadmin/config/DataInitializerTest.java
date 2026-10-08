@@ -69,6 +69,8 @@ class DataInitializerTest {
                         tuple("frota", "edit"),
                         tuple("frota", "delete"),
                         tuple("enderecos", "view"),
+                        tuple("enderecos", "edit"),
+                        tuple("enderecos", "delete"),
                         tuple("perfis", "create"),
                         tuple("perfis", "view"),
                         tuple("perfis", "edit"),
