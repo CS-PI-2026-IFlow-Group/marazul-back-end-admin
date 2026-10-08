@@ -65,7 +65,7 @@ class PermissionControllerTest {
     void list_returnsAllPermissionsWithExpectedFields() throws Exception {
         mockMvc.perform(get("/api/permissoes").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(16)))
+                .andExpect(jsonPath("$", hasSize(20)))
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].rotaBase").value("cidades"))
                 .andExpect(jsonPath("$[0].funcionalidade").value("view"));
@@ -76,12 +76,16 @@ class PermissionControllerTest {
         mockMvc.perform(get("/api/permissoes").header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].rotaBase").value("cidades"))
-                .andExpect(jsonPath("$[1].rotaBase").value("dashboard"))
-                .andExpect(jsonPath("$[2].rotaBase").value("estados"))
-                .andExpect(jsonPath("$[3].rotaBase").value("frota"))
-                .andExpect(jsonPath("$[3].funcionalidade").value("create"))
-                .andExpect(jsonPath("$[4].funcionalidade").value("delete"))
-                .andExpect(jsonPath("$[5].funcionalidade").value("edit"))
-                .andExpect(jsonPath("$[6].funcionalidade").value("view"));
+                .andExpect(jsonPath("$[0].funcionalidade").value("view"))
+                .andExpect(jsonPath("$[1].rotaBase").value("clientes"))
+                .andExpect(jsonPath("$[1].funcionalidade").value("create"))
+                .andExpect(jsonPath("$[2].rotaBase").value("clientes"))
+                .andExpect(jsonPath("$[2].funcionalidade").value("delete"))
+                .andExpect(jsonPath("$[3].funcionalidade").value("edit"))
+                .andExpect(jsonPath("$[4].funcionalidade").value("view"))
+                .andExpect(jsonPath("$[5].rotaBase").value("dashboard"))
+                .andExpect(jsonPath("$[6].rotaBase").value("estados"))
+                .andExpect(jsonPath("$[7].rotaBase").value("frota"))
+                .andExpect(jsonPath("$[7].funcionalidade").value("create"));
     }
 }

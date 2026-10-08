@@ -36,11 +36,15 @@ public class DataInitializer implements CommandLineRunner {
             new PermissionSeed("frota", "view"),
             new PermissionSeed("frota", "edit"),
             new PermissionSeed("frota", "delete"),
+            new PermissionSeed("clientes", "edit"),
+            new PermissionSeed("clientes", "delete"),
             new PermissionSeed("perfis", "create"),
             new PermissionSeed("perfis", "view"),
             new PermissionSeed("perfis", "edit"),
             new PermissionSeed("perfis", "delete"),
             new PermissionSeed("permissoes", "view"),
+            new PermissionSeed("clientes", "create"),
+            new PermissionSeed("clientes", "view"),
             new PermissionSeed("estados", "view"),
             new PermissionSeed("cidades", "view")
     );
