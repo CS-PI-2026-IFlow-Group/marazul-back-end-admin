@@ -35,6 +35,12 @@ public class Passenger {
         this.phone = normalizePhone(phone);
     }
 
+    public void update(String name, String cpf, String phone) {
+        this.name = name;
+        this.cpf = normalizeDocument(cpf);
+        this.phone = normalizePhone(phone);
+    }
+
     public static String normalizeDocument(String document) {
         if (document == null) {
             return null;
