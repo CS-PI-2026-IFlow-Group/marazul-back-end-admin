@@ -72,6 +72,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleAddressValidation(AddressValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
+    @ExceptionHandler(ClientNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleClientNotFound(ClientNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PassengerNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handlePassengerNotFound(PassengerNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleUserNotFound(UserNotFoundException ex) {
@@ -95,6 +104,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProfileValidationException.class)
     public ResponseEntity<Map<String, String>> handleProfileValidation(ProfileValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ClientValidationException.class)
+    public ResponseEntity<Map<String, String>> handleClientValidation(ClientValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PassengerValidationException.class)
+    public ResponseEntity<Map<String, String>> handlePassengerValidation(PassengerValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
 
@@ -128,6 +147,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Violação de restrição de integridade dos dados", ex);
+
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(body("A operação viola uma restrição de integridade dos dados. "
                         + "Verifique se a placa informada já está cadastrada."));

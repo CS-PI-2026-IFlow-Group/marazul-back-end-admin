@@ -71,11 +71,21 @@ class DataInitializerTest {
                         tuple("enderecos", "view"),
                         tuple("enderecos", "edit"),
                         tuple("enderecos", "delete"),
+                        tuple("clientes", "edit"),
+                        tuple("clientes", "delete"),
                         tuple("perfis", "create"),
                         tuple("perfis", "view"),
                         tuple("perfis", "edit"),
                         tuple("perfis", "delete"),
-                        tuple("permissoes", "view"));
+                        tuple("permissoes", "view"),
+                        tuple("clientes", "create"),
+                        tuple("clientes", "view"),
+                        tuple("passageiros", "create"),
+                        tuple("passageiros", "view"),
+                        tuple("passageiros", "edit"),
+                        tuple("passageiros", "delete"),
+                        tuple("estados", "view"),
+                        tuple("cidades", "view"));
         assertThat(adminProfile().getPermissions()).containsExactlyInAnyOrderElementsOf(permissions);
     }
 
