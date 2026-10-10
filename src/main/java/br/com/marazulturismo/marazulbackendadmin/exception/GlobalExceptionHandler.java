@@ -63,6 +63,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
     }
 
+    @ExceptionHandler(AddressNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleAddressNotFound(AddressNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AddressValidationException.class)
+    public ResponseEntity<Map<String, String>> handleAddressValidation(AddressValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
     @ExceptionHandler(ClientNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleClientNotFound(ClientNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));

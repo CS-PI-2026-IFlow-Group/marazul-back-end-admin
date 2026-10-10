@@ -21,6 +21,8 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 
     List<Client> findByNameContainingIgnoreCase(String name);
 
+    Optional<Client> findByAddressId(Long addressId);
+
     @EntityGraph(attributePaths = {"address.city.state"})
     @Query("""
             SELECT c FROM Client c
