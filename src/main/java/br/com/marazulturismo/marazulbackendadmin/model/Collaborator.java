@@ -1,0 +1,133 @@
+package br.com.marazulturismo.marazulbackendadmin.model;
+
+import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.Date;
+
+@Entity
+@Table(name = "collaborators")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Collaborator {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private Boolean isUser = false;
+
+    private LocalDateTime lastAccess;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private Profile profile;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private Date admissionDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Position position;
+
+    @Column(nullable = true, unique = true)
+    private String email;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    private Date disabledAt;
+
+    @Column(name = "cellphone_number")
+    private String cellphoneNumber;
+
+    @Embedded
+    private CNH cnh;
+
+    @Column(name = "reset_token", unique = true)
+    private String resetToken;
+
+    @Column(name = "reset_token_expiration")
+    private Date resetTokenExpiration;
+
+    public void setPasswordResetToken(String token, Date expiration) {
+        this.resetToken = token;
+        this.resetTokenExpiration = expiration;
+    }
+
+    public void clearPasswordResetToken() {
+        this.resetToken = null;
+        this.resetTokenExpiration = null;
+    }
+
+    public void updatePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void registerAccess() {
+        this.lastAccess = LocalDateTime.now();
+    }
+
+    public void update(
+            String name,
+            String email,
+            String cellphoneNumber,
+            Position position,
+            Boolean isUser,
+            Profile profile,
+            Date admissionDate,
+            CNH cnh) {
+        this.name = name;
+        this.email = email;
+        this.cellphoneNumber = cellphoneNumber;
+        this.position = position;
+        this.isUser = Boolean.TRUE.equals(isUser);
+        this.profile = profile;
+        if (admissionDate != null) {
+            this.admissionDate = admissionDate;
+        }
+        this.cnh = cnh;
+    }
+
+    public void deactivate() {
+        this.disabledAt = new Date();
+    }
+
+    public void activate() {
+        this.disabledAt = null;
+    }
+
+    public boolean isActive() {
+        return disabledAt == null;
+    }
+
+    public Collaborator(
+            String name,
+            Date admissionDate,
+            Position position,
+            Boolean isUser,
+            Profile profile,
+            String email,
+            String cellphoneNumber,
+            CNH cnh,
+            String passwordHash) {
+
+        this.name = name;
+        this.admissionDate = admissionDate;
+        this.position = position;
+        this.isUser = Boolean.TRUE.equals(isUser);
+        this.profile = profile;
+        this.email = email;
+        this.cellphoneNumber = cellphoneNumber;
+        this.cnh = cnh;
+        this.passwordHash = passwordHash;
+    }
+}
