@@ -44,6 +44,7 @@ public class PasswordSetupEmailService {
         Context context = new Context();
         context.setVariable("name", collaborator.getName());
         context.setVariable("link", buildUrl(token));
+        context.setVariable("expirationMinutes", PasswordResetService.TOKEN_EXPIRATION_MINUTES);
 
         try {
             emailSenderService.sendEmailTemplateSync(

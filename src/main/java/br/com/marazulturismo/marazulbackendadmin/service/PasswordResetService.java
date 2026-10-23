@@ -18,13 +18,12 @@ public class PasswordResetService {
     private final EmailSenderService emailSenderService;
     private final BCryptPasswordEncoder passwordEncoder;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
-
     @Value("${app.password-reset.base-url}")
     private String resetUrl;
 
-    private static final long TOKEN_EXPIRATION_MS = 15L * 60 * 1000;
+    // Prazo do T04, também informado no texto dos e-mails
+    public static final long TOKEN_EXPIRATION_MINUTES = 15;
+    private static final long TOKEN_EXPIRATION_MS = TOKEN_EXPIRATION_MINUTES * 60 * 1000;
 
     public PasswordResetService(CollaboratorRepository userRepository, EmailSenderService emailSenderService) {
         this.userRepository = userRepository;
@@ -36,7 +35,7 @@ public class PasswordResetService {
         userRepository.findByEmail(email).ifPresent(user -> {
             String token = createResetToken(user);
 
-            sendResetEmail(email, token);
+            sendResetEmail(user, token);
 
         });
     }
@@ -57,12 +56,14 @@ public class PasswordResetService {
         userRepository.save(user);
     }
 
-    private void sendResetEmail(String to, String token) {
+    private void sendResetEmail(Collaborator user, String token) {
         Context context = new Context();
 
         String link = buildUrl(token);
+        context.setVariable("name", user.getName());
         context.setVariable("link", link);
-        emailSenderService.sendEmailTemplate(to, 
+        context.setVariable("expirationMinutes", TOKEN_EXPIRATION_MINUTES);
+        emailSenderService.sendEmailTemplate(user.getEmail(),
             "Recuperação de senha - Marazul Turismo",
             "passwordReset", context);
     }

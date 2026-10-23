@@ -11,6 +11,7 @@ import jakarta.mail.Message;
 import jakarta.mail.Multipart;
 import jakarta.mail.Part;
 import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -236,6 +238,58 @@ class PasswordSetupEmailTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Token inválido ou expirado."));
+    }
+
+    @Test
+    void setupEmail_hasSharedLayoutButtonAndTextLink() throws Exception {
+        mockMvc.perform(post("/api/funcionario")
+                        .header("Authorization", token)
+                        .contentType(APPLICATION_JSON)
+                        .content(collaboratorJson("visual@marazul.test", true)))
+                .andExpect(status().isCreated());
+        String emailToken = assertSetupEmailSentTo("visual@marazul.test", 0);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertBrandedEmail(captor.getValue(), DEFINE_PASSWORD_LINK + emailToken, "Definir minha senha");
+    }
+
+    @Test
+    void resetEmail_hasSharedLayoutButtonAndTextLink() throws Exception {
+        saveEmployee("recuperar@marazul.test", true);
+
+        mockMvc.perform(post("/api/auth/recuperar-senha")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"email":"recuperar@marazul.test"}
+                                """))
+                .andExpect(status().isOk());
+
+        // A recuperação continua assíncrona
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender, timeout(5000)).send(captor.capture());
+        String resetToken = collaboratorRepository.findByEmail("recuperar@marazul.test").orElseThrow().getResetToken();
+        assertBrandedEmail(captor.getValue(), "http://localhost:3000/reset-password?token=" + resetToken,
+                "Redefinir minha senha");
+    }
+
+    // Remetente identificado, layout compartilhado, botão + link em texto, prazo e nada externo
+    private static void assertBrandedEmail(MimeMessage message, String link, String buttonLabel) throws Exception {
+        InternetAddress from = (InternetAddress) message.getFrom()[0];
+        assertThat(from.getAddress()).isEqualTo("no-reply@marazul.test");
+        assertThat(from.getPersonal()).isEqualTo("Marazul Turismo");
+
+        String html = htmlOf(message);
+        assertThat(html)
+                .contains("Marazul Turismo")
+                .contains("Sistema administrativo")
+                .contains(buttonLabel)
+                .contains("Este link é válido por <strong>15 minutos</strong>")
+                .doesNotContain("<style")
+                .doesNotContain("<link")
+                .doesNotContainPattern("src=\"(?!https?://|cid:)");
+        // Uma vez no href do botão, outra no href do link em texto e outra como texto visível
+        assertThat(html.split(java.util.regex.Pattern.quote(link), -1)).hasSize(4);
     }
 
     // Confere destinatário, link e validade de 15 minutos; devolve o token enviado

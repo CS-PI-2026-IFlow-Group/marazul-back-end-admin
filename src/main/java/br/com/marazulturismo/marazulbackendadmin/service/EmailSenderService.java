@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.SimpleMailMessage;
@@ -16,9 +17,13 @@ import org.thymeleaf.context.Context;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+import java.io.UnsupportedEncodingException;
+
 
 @Service
 public class EmailSenderService {
+
+    public static final String SENDER_NAME = "Marazul Turismo";
 
     private static final Logger log = LoggerFactory.getLogger(EmailSenderService.class);
 
@@ -27,6 +32,9 @@ public class EmailSenderService {
 
     @Autowired
     private TemplateEngine templateEngine;
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
 
 
     public void sendEmail(String recipient, String subject, String message){
@@ -53,10 +61,12 @@ public class EmailSenderService {
         MimeMessage message = mailSender.createMimeMessage();
         try {
             MimeMessageHelper messageHelper = new MimeMessageHelper(message, true, "UTF-8");
+            // Nome de exibição para o destinatário reconhecer o remetente
+            messageHelper.setFrom(fromEmail, SENDER_NAME);
             messageHelper.setTo(recipient);
             messageHelper.setSubject(subject);
             messageHelper.setText(templateString, true);
-        } catch (MessagingException e) {
+        } catch (MessagingException | UnsupportedEncodingException e) {
             throw new MailPreparationException("Não foi possível montar o e-mail.", e);
         }
         mailSender.send(message);
