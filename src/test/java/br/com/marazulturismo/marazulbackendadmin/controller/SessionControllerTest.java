@@ -1,10 +1,12 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
-import br.com.marazulturismo.marazulbackendadmin.enums.Position;
-import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
-import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
-import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
-import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.Date;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,12 +15,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-
-import static org.hamcrest.Matchers.aMapWithSize;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Profile;
+import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
+import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -70,7 +72,7 @@ class SessionControllerTest {
     void me_neverExposesPassword() throws Exception {
         mockMvc.perform(get("/api/auth/me").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(aMapWithSize(3)))
+                .andExpect(jsonPath("$").value(aMapWithSize(5)))
                 .andExpect(jsonPath("$.senha").doesNotExist())
                 .andExpect(jsonPath("$.senhaHash").doesNotExist())
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
@@ -127,4 +129,42 @@ class SessionControllerTest {
                 .andExpect(jsonPath("$.id").value(admin.getId()))
                 .andExpect(jsonPath("$.email").value("ana.souza@marazul.test"));
     }
+      @Test
+    void me_returnsProfileAndPermissionsFromToken() throws Exception {
+        mockMvc.perform(get("/api/auth/me").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perfil").value("Administrador"))
+                .andExpect(jsonPath("$.permissoes", hasItem("clientes:view")));
+    }
+
+    @Test
+    void me_forProfileWithoutPermissions_returnsEmptyList() throws Exception {
+        Profile withoutPermissions = profileRepository.save(new Profile("Sem permissões"));
+        Collaborator collaborator = userRepository.save(new Collaborator(
+                "Carla Dias",
+                new Date(),
+                Position.OTHER,
+                true, withoutPermissions,
+                "carla.dias@marazul.test",
+                null,
+                null,
+                "$2a$10$hash-irrelevante-para-o-teste"));
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + jwtService.generateToken(collaborator)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perfil").value("Sem permissões"))
+                .andExpect(jsonPath("$.permissoes").isEmpty());
+    }
+
+    @Test
+    void me_keepsTokenPermissionsWhenProfileChangesAfterLogin() throws Exception {
+        Profile adminProfile = profileRepository.findByName("Administrador").orElseThrow();
+        adminProfile.update("Administrador", List.of());
+        profileRepository.saveAndFlush(adminProfile);
+
+        mockMvc.perform(get("/api/auth/me").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissoes", hasItem("clientes:view")));
+    }  
 }

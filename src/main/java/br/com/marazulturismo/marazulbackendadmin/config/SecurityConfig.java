@@ -14,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -81,10 +82,18 @@ public class SecurityConfig {
                         .hasAuthority("passageiros:edit")
                         .requestMatchers(HttpMethod.DELETE, "/api/passageiros/**")
                         .hasAuthority("passageiros:delete")
+                        .requestMatchers(HttpMethod.POST, "/api/viagens/**")
+                        .hasAuthority("viagens:create")
+                        .requestMatchers(HttpMethod.GET, "/api/viagens/**")
+                        .hasAuthority("viagens:view")
+                        .requestMatchers(HttpMethod.PUT, "/api/viagens/**")
+                        .hasAuthority("viagens:edit")
+                        .requestMatchers(HttpMethod.DELETE, "/api/viagens/**")
+                        .hasAuthority("viagens:delete")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex ->
-                        ex.authenticationEntryPoint(unauthorizedEntryPoint()))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        ex.authenticationEntryPoint(unauthorizedEntryPoint())
+                                .accessDeniedHandler(accessDeniedHandler())).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -98,6 +107,15 @@ public class SecurityConfig {
             response.getWriter().write(
                     "{\"erro\":\"Autenticação necessária. Credencial ausente ou inválida.\","
                             + "\"message\":\"Autenticação necessária. Credencial ausente ou inválida.\"}");
+        };
+    }
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"erro\":\"Acesso negado. Seu perfil não tem permissão para este recurso.\"," + "\"message\":\"Acesso negado. Seu perfil não tem permissão para este recurso.\"}");
         };
     }
 

@@ -18,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -73,9 +74,9 @@ public class AuthService {
         return Optional.empty();
     }
 
-    public SessionUserResponseDTO findSessionUser(Long id) {
+    public SessionUserResponseDTO findSessionUser(Long id, String perfil, List<String> permissoes) {
         return userRepository.findById(id)
-                .map(SessionUserResponseDTO::fromEntity)
+                .map(user -> SessionUserResponseDTO.fromEntity(user, perfil, permissoes))
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
