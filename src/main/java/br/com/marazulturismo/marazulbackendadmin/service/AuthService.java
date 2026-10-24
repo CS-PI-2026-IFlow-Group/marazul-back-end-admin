@@ -14,13 +14,12 @@ import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.context.Context;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -28,24 +27,20 @@ public class AuthService {
     private final CollaboratorRepository userRepository;
     private final ProfileRepository profileRepository;
     private final BCryptPasswordEncoder passwordEncoder;
-    private final EmailSenderService emailSenderService;
-    private final PasswordResetService passwordResetService;
-    private final String definePasswordUrl;
+    private final PasswordSetupEmailService passwordSetupEmailService;
 
     public AuthService(CollaboratorRepository userRepository, ProfileRepository profileRepository,
-        EmailSenderService emailSenderService, PasswordResetService passwordResetService, 
-        @Value("${app.password-define.base-url}") String definePasswordUrl) {
+        PasswordSetupEmailService passwordSetupEmailService) {
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
-        this.emailSenderService = emailSenderService;
-        this.passwordResetService = passwordResetService;
-        this.definePasswordUrl = definePasswordUrl;
+        this.passwordSetupEmailService = passwordSetupEmailService;
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
 
 
-    public void register(RegisterRequestDTO dto) {
+    // Devolve o aviso de falha no envio do e-mail, se houver
+    public Optional<String> register(RegisterRequestDTO dto) {
         if (Boolean.TRUE.equals(dto.isUser()) && dto.email() == null) {
             throw new EmployeeValidationException("O e-mail é obrigatório para colaboradores com acesso ao sistema.");
         }
@@ -72,26 +67,11 @@ public class AuthService {
 
        
         userRepository.save(user);
-        
 
         if (Boolean.TRUE.equals(user.getIsUser())) {
-
-            String token = passwordResetService.createResetToken(user);
-            String redifineLink = buildUrl(token);
-
-
-            Context context = new Context();
-            context.setVariable("name", user.getName());
-            context.setVariable("link", redifineLink);
-            emailSenderService.sendEmailTemplate(
-            user.getEmail(),
-            "Success",
-            "newRegister",
-            context
-        );
-
+            return passwordSetupEmailService.send(user);
         }
-
+        return Optional.empty();
     }
 
     public SessionUserResponseDTO findSessionUser(Long id, String perfil, List<String> permissoes) {
@@ -115,37 +95,6 @@ public class AuthService {
         user.registerAccess();
         userRepository.save(user);
         return user;
-    }
-
-
-    public void resendEmail(RegisterRequestDTO dto){
-    userRepository.findByEmail(dto.email()).ifPresent(user -> {
-        if (Boolean.TRUE.equals(user.getIsUser())) {
-            String token = passwordResetService.createResetToken(user);
-            String redefineLink = buildUrl(token);
-
-            Context context = new Context();
-            context.setVariable("name", user.getName());
-            context.setVariable("link", redefineLink);
-
-            emailSenderService.sendEmailTemplate(
-                    user.getEmail(),
-                    "Success",
-                    "newRegister",
-                    context
-            );
-        }
-    });
-    }
-
-// TODO: substitiuir pelo endpoint correto com a tela de definir senha
-    private String buildUrl(String token){
-        String baseUrl = definePasswordUrl;
-        if(baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-
-        return baseUrl + "/define-password?token=" + token;
     }
 
     private static CNH buildCnh(RegisterRequestDTO dto) {
