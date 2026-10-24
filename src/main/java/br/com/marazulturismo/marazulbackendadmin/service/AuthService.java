@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class AuthService {
@@ -93,9 +94,9 @@ public class AuthService {
 
     }
 
-    public SessionUserResponseDTO findSessionUser(Long id) {
+    public SessionUserResponseDTO findSessionUser(Long id, String perfil, List<String> permissoes) {
         return userRepository.findById(id)
-                .map(SessionUserResponseDTO::fromEntity)
+                .map(user -> SessionUserResponseDTO.fromEntity(user, perfil, permissoes))
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
