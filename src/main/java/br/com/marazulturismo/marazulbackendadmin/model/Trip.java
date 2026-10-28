@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -63,6 +66,12 @@ public class Trip {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TripPassenger> passengers = new ArrayList<>();
+
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Expense> expenses = new ArrayList<>();
+
     public Trip(City originCity, City destinationCity,
                 LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
                 LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
@@ -99,6 +108,48 @@ public class Trip {
         this.notes = notes;
         if (status != null) {
             this.status = status;
+        }
+    }
+
+    public List<TripPassenger> getPassengers() {
+        return Collections.unmodifiableList(passengers);
+    }
+
+    public List<Expense> getExpenses() {
+        return Collections.unmodifiableList(expenses);
+    }
+
+    public void replacePassengers(List<TripPassenger> newPassengers) {
+        this.passengers.clear();
+        if (newPassengers != null) {
+            for (TripPassenger tp : newPassengers) {
+                tp.assignTrip(this);
+                this.passengers.add(tp);
+            }
+        }
+    }
+
+    public void addPassenger(TripPassenger tripPassenger) {
+        if (tripPassenger != null) {
+            tripPassenger.assignTrip(this);
+            this.passengers.add(tripPassenger);
+        }
+    }
+
+    public void replaceExpenses(List<Expense> newExpenses) {
+        this.expenses.clear();
+        if (newExpenses != null) {
+            for (Expense expense : newExpenses) {
+                expense.assignTrip(this);
+                this.expenses.add(expense);
+            }
+        }
+    }
+
+    public void addExpense(Expense expense) {
+        if (expense != null) {
+            expense.assignTrip(this);
+            this.expenses.add(expense);
         }
     }
 }
