@@ -63,8 +63,15 @@ public class Trip {
 
     private Integer minimumPassengers;
 
+    @Column(name = "estimated_passenger_amount", precision = 10, scale = 2)
+    private java.math.BigDecimal estimatedPassengerAmount;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsible_passenger_id")
+    private Passenger responsiblePassenger;
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TripPassenger> passengers = new ArrayList<>();
@@ -87,14 +94,25 @@ public class Trip {
                 Integer minimumPassengers, String notes) {
         update(originCity, destinationCity, plannedDepartureOrigin, plannedArrivalDestination,
                 plannedDepartureDestination, plannedArrivalOrigin, vehicle, drivers,
-                client, minimumPassengers, notes, TripStatus.SCHEDULED);
+                client, minimumPassengers, null, notes, null, TripStatus.SCHEDULED);
     }
 
     public void update(City originCity, City destinationCity,
                        LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
                        LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
                        Vehicle vehicle, Set<Collaborator> drivers, Client client,
-                       Integer minimumPassengers, String notes, TripStatus status) {
+                           Integer minimumPassengers, String notes, TripStatus status) {
+                update(originCity, destinationCity, plannedDepartureOrigin, plannedArrivalDestination,
+                    plannedDepartureDestination, plannedArrivalOrigin, vehicle, drivers, client,
+                    minimumPassengers, this.estimatedPassengerAmount, notes, this.responsiblePassenger, status);
+                }
+
+                public void update(City originCity, City destinationCity,
+                           LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
+                           LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
+                           Vehicle vehicle, Set<Collaborator> drivers, Client client,
+                           Integer minimumPassengers, java.math.BigDecimal estimatedPassengerAmount,
+                           String notes, Passenger responsiblePassenger, TripStatus status) {
         this.originCity = originCity;
         this.destinationCity = destinationCity;
         this.plannedDepartureOrigin = plannedDepartureOrigin;
@@ -105,10 +123,20 @@ public class Trip {
         this.drivers = drivers == null ? new HashSet<>() : new HashSet<>(drivers);
         this.client = client;
         this.minimumPassengers = minimumPassengers;
+        this.estimatedPassengerAmount = estimatedPassengerAmount;
         this.notes = notes;
+        this.responsiblePassenger = responsiblePassenger;
         if (status != null) {
             this.status = status;
         }
+    }
+
+    public void setResponsiblePassenger(Passenger responsiblePassenger) {
+        this.responsiblePassenger = responsiblePassenger;
+    }
+
+    public void confirm() {
+        this.status = TripStatus.CONFIRMED;
     }
 
     public List<TripPassenger> getPassengers() {

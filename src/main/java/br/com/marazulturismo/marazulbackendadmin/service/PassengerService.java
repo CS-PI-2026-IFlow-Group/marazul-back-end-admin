@@ -6,6 +6,7 @@ import br.com.marazulturismo.marazulbackendadmin.exception.PassengerNotFoundExce
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerValidationException;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.repository.PassengerRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.TripPassengerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,12 @@ import java.util.List;
 public class PassengerService {
 
     private final PassengerRepository passengerRepository;
+    private final TripPassengerRepository tripPassengerRepository;
 
-    public PassengerService(PassengerRepository passengerRepository) {
+    public PassengerService(PassengerRepository passengerRepository,
+                            TripPassengerRepository tripPassengerRepository) {
         this.passengerRepository = passengerRepository;
+        this.tripPassengerRepository = tripPassengerRepository;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +68,13 @@ public class PassengerService {
 
     @Transactional
     public void delete(Long id) {
-        passengerRepository.delete(findEntity(id));
+        Passenger passenger = findEntity(id);
+        if (tripPassengerRepository.existsByPassengerId(id)) {
+            throw new PassengerValidationException(
+                    "Não é possível excluir o passageiro " + passenger.getName()
+                            + " porque ele está vinculado a uma ou mais viagens.");
+        }
+        passengerRepository.delete(passenger);
     }
 
     private void validateCpf(String cpf, Long passengerId) {
