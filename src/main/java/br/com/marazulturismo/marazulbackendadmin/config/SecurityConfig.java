@@ -90,6 +90,8 @@ public class SecurityConfig {
                         .hasAuthority("viagens:edit")
                         .requestMatchers(HttpMethod.DELETE, "/api/viagens/**")
                         .hasAuthority("viagens:delete")
+                        .requestMatchers(HttpMethod.GET, "/api/relatorios/**")
+                        .hasAuthority("relatorios:view")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex ->
                         ex.authenticationEntryPoint(unauthorizedEntryPoint())
