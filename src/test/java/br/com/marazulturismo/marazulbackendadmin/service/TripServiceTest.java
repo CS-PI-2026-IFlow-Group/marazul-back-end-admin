@@ -29,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -40,6 +41,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @Transactional
 class TripServiceTest {
+
+    private static final LocalDateTime DEPARTURE_ORIGIN = LocalDate.now().plusDays(30).atTime(8, 0);
+    private static final LocalDateTime ARRIVAL_DESTINATION = DEPARTURE_ORIGIN.plusHours(4);
+    private static final LocalDateTime DEPARTURE_DESTINATION = DEPARTURE_ORIGIN.plusDays(2).plusHours(6);
+    private static final LocalDateTime ARRIVAL_ORIGIN = DEPARTURE_ORIGIN.plusDays(2).plusHours(10);
 
     @Autowired
     private TripService tripService;
@@ -173,10 +179,10 @@ class TripServiceTest {
         TripRequestDTO request = new TripRequestDTO(
                 cityRepository.findAll().get(0).getId(),
                 cityRepository.findAll().get(1).getId(),
-                LocalDateTime.of(2026, 5, 1, 8, 0),
-                LocalDateTime.of(2026, 5, 1, 12, 0),
-                LocalDateTime.of(2026, 5, 3, 14, 0),
-                LocalDateTime.of(2026, 5, 3, 18, 0),
+                DEPARTURE_ORIGIN,
+                ARRIVAL_DESTINATION,
+                DEPARTURE_DESTINATION,
+                ARRIVAL_ORIGIN,
                 vehicle.getId(),
                 Set.of(driver.getId()),
                 null,
@@ -197,8 +203,8 @@ class TripServiceTest {
     void deletePassenger_rejectsPassengerLinkedToTrip() {
         Trip trip = new Trip(
                 cityRepository.findAll().get(0), cityRepository.findAll().get(1),
-                LocalDateTime.of(2026, 5, 1, 8, 0), LocalDateTime.of(2026, 5, 1, 12, 0),
-                LocalDateTime.of(2026, 5, 3, 14, 0), LocalDateTime.of(2026, 5, 3, 18, 0),
+                DEPARTURE_ORIGIN, ARRIVAL_DESTINATION,
+                DEPARTURE_DESTINATION, ARRIVAL_ORIGIN,
                 vehicle, Set.of(driver));
         trip.addPassenger(new TripPassenger(trip, passengerOne, new BigDecimal("100.00")));
         tripRepository.saveAndFlush(trip);
@@ -216,10 +222,10 @@ class TripServiceTest {
         return new TripRequestDTO(
                 cities.get(0).getId(),
                 cities.get(1).getId(),
-                LocalDateTime.of(2026, 5, 1, 8, 0),
-                LocalDateTime.of(2026, 5, 1, 12, 0),
-                LocalDateTime.of(2026, 5, 3, 14, 0),
-                LocalDateTime.of(2026, 5, 3, 18, 0),
+                DEPARTURE_ORIGIN,
+                ARRIVAL_DESTINATION,
+                DEPARTURE_DESTINATION,
+                ARRIVAL_ORIGIN,
                 vehicle.getId(),
                 Set.of(driver.getId()),
                 null,

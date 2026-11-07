@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -62,6 +63,7 @@ public class TripService {
 
     @Transactional
     public TripResponseDTO create(TripRequestDTO dto) {
+        validateRouteAndSchedule(dto);
         Vehicle vehicle = findVehicle(dto.vehicleId());
         Trip trip = new Trip(
                 findCity(dto.originCityId()),
@@ -122,6 +124,24 @@ public class TripService {
         }
         trip.confirm();
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
+    }
+
+    private void validateRouteAndSchedule(TripRequestDTO dto) {
+        if (dto.originCityId().equals(dto.destinationCityId())) {
+            throw new TripValidationException("A cidade de destino deve ser diferente da cidade de origem.");
+        }
+        if (dto.plannedDepartureOrigin().isBefore(LocalDateTime.now())) {
+            throw new TripValidationException("A saída prevista da origem não pode estar no passado.");
+        }
+        if (!dto.plannedArrivalDestination().isAfter(dto.plannedDepartureOrigin())) {
+            throw new TripValidationException("A chegada prevista ao destino deve ser posterior à saída da origem.");
+        }
+        if (!dto.plannedDepartureDestination().isAfter(dto.plannedArrivalDestination())) {
+            throw new TripValidationException("A saída prevista do destino deve ser posterior à chegada ao destino.");
+        }
+        if (!dto.plannedArrivalOrigin().isAfter(dto.plannedDepartureDestination())) {
+            throw new TripValidationException("A chegada prevista à origem deve ser posterior à saída do destino.");
+        }
     }
 
     private void replacePassengersIfProvided(Trip trip, List<TripPassengerRequestDTO> requests) {
