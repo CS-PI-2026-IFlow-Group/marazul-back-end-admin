@@ -4,12 +4,14 @@ import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.BodyworkModel;
+import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerValidationException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationException;
+import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
@@ -86,7 +88,7 @@ class TripServiceTest {
         Profile profile = profileRepository.findByName("Administrador").orElseThrow();
         driver = collaboratorRepository.save(new Collaborator(
                 "Motorista Teste", new Date(), Position.DRIVER,
-                false, profile, null, null, null, null));
+                false, profile, null, null, new CNH("12345678900", CNHType.D), null));
 
         passengerOne = passengerRepository.save(new Passenger("Passageiro Um", "111.222.333-44", null));
         passengerTwo = passengerRepository.save(new Passenger("Passageiro Dois", "222.333.444-55", null));

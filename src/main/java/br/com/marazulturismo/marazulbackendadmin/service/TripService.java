@@ -3,6 +3,8 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.exception.CityNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeNotFoundException;
@@ -10,6 +12,7 @@ import br.com.marazulturismo.marazulbackendadmin.exception.PassengerNotFoundExce
 import br.com.marazulturismo.marazulbackendadmin.exception.TripNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationException;
 import br.com.marazulturismo.marazulbackendadmin.exception.VehicleNotFoundException;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.model.TripPassenger;
@@ -65,6 +68,9 @@ public class TripService {
     public TripResponseDTO create(TripRequestDTO dto) {
         validateRouteAndSchedule(dto);
         Vehicle vehicle = findVehicle(dto.vehicleId());
+        validateVehicle(vehicle);
+        Set<Collaborator> drivers = findDrivers(dto.driverIds());
+        validateDrivers(drivers);
         Trip trip = new Trip(
                 findCity(dto.originCityId()),
                 findCity(dto.destinationCityId()),
@@ -73,7 +79,7 @@ public class TripService {
                 dto.plannedDepartureDestination(),
                 dto.plannedArrivalOrigin(),
                 vehicle,
-                findDrivers(dto.driverIds()),
+                drivers,
                 findClient(dto.clientId()),
                 dto.minimumPassengers(),
                 dto.notes());
@@ -141,6 +147,27 @@ public class TripService {
         }
         if (!dto.plannedArrivalOrigin().isAfter(dto.plannedDepartureDestination())) {
             throw new TripValidationException("A chegada prevista à origem deve ser posterior à saída do destino.");
+        }
+    }
+
+    private void validateVehicle(Vehicle vehicle) {
+        if (vehicle.getStatus() != VehicleStatus.ACTIVE) {
+            throw new TripValidationException("O ônibus " + vehicle.getPrefix() + " está " + vehicle.getStatus().getLabel().toLowerCase() + " e não pode ser agendado.");
+        }
+    }
+
+    private void validateDrivers(Set<Collaborator> drivers) {
+        for (Collaborator driver : drivers) {
+            if (driver.getPosition() != Position.DRIVER) {
+                throw new TripValidationException(driver.getName() + " não é motorista e não pode ser escalado.");
+            }
+            if (!driver.isActive()) {
+                throw new TripValidationException("O motorista " + driver.getName() + " está inativo.");
+            }
+            if (driver.getCnh() == null || driver.getCnh().getNumber() == null
+                    || driver.getCnh().getNumber().isBlank()) {
+                throw new TripValidationException("O motorista " + driver.getName() + " não tem CNH cadastrada.");
+            }
         }
     }
 
