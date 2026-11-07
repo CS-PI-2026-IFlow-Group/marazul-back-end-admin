@@ -15,6 +15,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Locale;
+
 @Entity
 @Table(name = "clients")
 @Getter
@@ -34,6 +36,10 @@ public class Client {
     @Column(unique = true)
     private String cnpj;
 
+    private String phone;
+
+    private String email;
+
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "address_id", nullable = false, unique = true)
     private Address address;
@@ -51,11 +57,18 @@ public class Client {
         this.cnpj = cnpj;
     }
 
+    public void updateContact(String phone, String email) {
+        this.phone = phone;
+        this.email = email;
+    }
+
     @PrePersist
     @PreUpdate
     private void normalizeAndValidateDocuments() {
         cpf = normalizeDocument(cpf);
         cnpj = normalizeDocument(cnpj);
+        phone = normalizeDocument(phone);
+        email = email == null || email.isBlank() ? null : email.trim().toLowerCase(Locale.ROOT);
 
         if ((cpf == null) == (cnpj == null)) {
             throw new IllegalStateException("Informe somente CPF ou CNPJ para o cliente.");
