@@ -3,7 +3,9 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
+import br.com.marazulturismo.marazulbackendadmin.exception.CityNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
+import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationException;
@@ -180,12 +182,21 @@ public class TripService {
         if (ids == null || ids.isEmpty()) {
             return new HashSet<>();
         }
-        return new HashSet<>(collaboratorRepository.findAllById(ids));
+        List<br.com.marazulturismo.marazulbackendadmin.model.Collaborator> drivers = collaboratorRepository.findAllById(ids);
+
+        if(drivers.size() < ids.size()) {
+            Set<Long> foundIds = new HashSet<>();
+            drivers.forEach(driver -> foundIds.add(driver.getId()));
+            Long missingId = ids.stream().filter(id -> !foundIds.contains(id)).findFirst().orElseThrow();
+            throw new EmployeeNotFoundException(missingId);
+        }
+        return new HashSet<>(drivers);
+
     }
 
     private br.com.marazulturismo.marazulbackendadmin.model.City findCity(Long id) {
         return cityRepository.findById(id)
-                .orElseThrow(() -> new TripValidationException("Cidade não encontrada: " + id));
+                .orElseThrow(() -> new CityNotFoundException(id));
     }
 
     private Vehicle findVehicle(Long id) {
