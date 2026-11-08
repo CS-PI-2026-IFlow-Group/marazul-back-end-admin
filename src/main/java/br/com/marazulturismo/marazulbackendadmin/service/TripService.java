@@ -71,6 +71,7 @@ public class TripService {
         validateVehicle(vehicle);
         Set<Collaborator> drivers = findDrivers(dto.driverIds());
         validateDrivers(drivers);
+        validateScheduleConflicts(dto, vehicle, drivers, null);
         Trip trip = new Trip(
                 findCity(dto.originCityId()),
                 findCity(dto.destinationCityId()),
@@ -167,6 +168,23 @@ public class TripService {
             if (driver.getCnh() == null || driver.getCnh().getNumber() == null
                     || driver.getCnh().getNumber().isBlank()) {
                 throw new TripValidationException("O motorista " + driver.getName() + " não tem CNH cadastrada.");
+            }
+        }
+    }
+    
+    private void validateScheduleConflicts(TripRequestDTO dto, Vehicle vehicle, Set<Collaborator> drivers, Long excludeTripId) {
+        LocalDateTime start = dto.plannedDepartureOrigin();
+        LocalDateTime end = dto.plannedArrivalOrigin();
+
+        List<Long> vehicleConflicts = tripRepository.findVehicleOverlapIds(vehicle.getId(), start, end, excludeTripId);
+        if (!vehicleConflicts.isEmpty()) {
+            throw new TripValidationException("O ônibus " + vehicle.getPrefix() + " já está escalado na viagem " + vehicleConflicts.get(0) + " no mesmo período.");
+        }
+
+        for (Collaborator driver : drivers) {
+            List<Long> driverConflicts = tripRepository.findDriverOverlapIds(driver.getId(), start, end, excludeTripId);
+            if (!driverConflicts.isEmpty()) {
+                throw new TripValidationException("O motorista " + driver.getName() + " já está escalado na viagem " + driverConflicts.get(0) + " no mesmo período.");
             }
         }
     }
