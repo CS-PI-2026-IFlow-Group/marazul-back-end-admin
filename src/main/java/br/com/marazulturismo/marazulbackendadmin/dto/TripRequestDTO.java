@@ -2,12 +2,14 @@ package br.com.marazulturismo.marazulbackendadmin.dto;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+@JsonIgnoreProperties({"departureOrigin", "arrivalDestination", "departureDestination", "arrivalOrigin"})
 public record TripRequestDTO(
 
         @NotNull(message = "A cidade de origem é obrigatória.") 
