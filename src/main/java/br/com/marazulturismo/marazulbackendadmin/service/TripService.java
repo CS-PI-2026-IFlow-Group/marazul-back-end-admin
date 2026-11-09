@@ -3,11 +3,16 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
+import br.com.marazulturismo.marazulbackendadmin.exception.CityNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
+import br.com.marazulturismo.marazulbackendadmin.exception.EmployeeNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationException;
 import br.com.marazulturismo.marazulbackendadmin.exception.VehicleNotFoundException;
+import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.model.TripPassenger;
@@ -22,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -60,7 +66,12 @@ public class TripService {
 
     @Transactional
     public TripResponseDTO create(TripRequestDTO dto) {
+        validateRouteAndSchedule(dto);
         Vehicle vehicle = findVehicle(dto.vehicleId());
+        validateVehicle(vehicle);
+        Set<Collaborator> drivers = findDrivers(dto.driverIds());
+        validateDrivers(drivers);
+        validateScheduleConflicts(dto, vehicle, drivers, null);
         Trip trip = new Trip(
                 findCity(dto.originCityId()),
                 findCity(dto.destinationCityId()),
@@ -69,7 +80,7 @@ public class TripService {
                 dto.plannedDepartureDestination(),
                 dto.plannedArrivalOrigin(),
                 vehicle,
-                findDrivers(dto.driverIds()),
+                drivers,
                 findClient(dto.clientId()),
                 dto.minimumPassengers(),
                 dto.notes());
@@ -120,6 +131,62 @@ public class TripService {
         }
         trip.confirm();
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
+    }
+
+    private void validateRouteAndSchedule(TripRequestDTO dto) {
+        if (dto.originCityId().equals(dto.destinationCityId())) {
+            throw new TripValidationException("A cidade de destino deve ser diferente da cidade de origem.");
+        }
+        if (dto.plannedDepartureOrigin().isBefore(LocalDateTime.now())) {
+            throw new TripValidationException("A saída prevista da origem não pode estar no passado.");
+        }
+        if (!dto.plannedArrivalDestination().isAfter(dto.plannedDepartureOrigin())) {
+            throw new TripValidationException("A chegada prevista ao destino deve ser posterior à saída da origem.");
+        }
+        if (!dto.plannedDepartureDestination().isAfter(dto.plannedArrivalDestination())) {
+            throw new TripValidationException("A saída prevista do destino deve ser posterior à chegada ao destino.");
+        }
+        if (!dto.plannedArrivalOrigin().isAfter(dto.plannedDepartureDestination())) {
+            throw new TripValidationException("A chegada prevista à origem deve ser posterior à saída do destino.");
+        }
+    }
+
+    private void validateVehicle(Vehicle vehicle) {
+        if (vehicle.getStatus() != VehicleStatus.ACTIVE) {
+            throw new TripValidationException("O ônibus " + vehicle.getPrefix() + " está " + vehicle.getStatus().getLabel().toLowerCase() + " e não pode ser agendado.");
+        }
+    }
+
+    private void validateDrivers(Set<Collaborator> drivers) {
+        for (Collaborator driver : drivers) {
+            if (driver.getPosition() != Position.DRIVER) {
+                throw new TripValidationException(driver.getName() + " não é motorista e não pode ser escalado.");
+            }
+            if (!driver.isActive()) {
+                throw new TripValidationException("O motorista " + driver.getName() + " está inativo.");
+            }
+            if (driver.getCnh() == null || driver.getCnh().getNumber() == null
+                    || driver.getCnh().getNumber().isBlank()) {
+                throw new TripValidationException("O motorista " + driver.getName() + " não tem CNH cadastrada.");
+            }
+        }
+    }
+    
+    private void validateScheduleConflicts(TripRequestDTO dto, Vehicle vehicle, Set<Collaborator> drivers, Long excludeTripId) {
+        LocalDateTime start = dto.plannedDepartureOrigin();
+        LocalDateTime end = dto.plannedArrivalOrigin();
+
+        List<Long> vehicleConflicts = tripRepository.findVehicleOverlapIds(vehicle.getId(), start, end, excludeTripId);
+        if (!vehicleConflicts.isEmpty()) {
+            throw new TripValidationException("O ônibus " + vehicle.getPrefix() + " já está escalado na viagem " + vehicleConflicts.get(0) + " no mesmo período.");
+        }
+
+        for (Collaborator driver : drivers) {
+            List<Long> driverConflicts = tripRepository.findDriverOverlapIds(driver.getId(), start, end, excludeTripId);
+            if (!driverConflicts.isEmpty()) {
+                throw new TripValidationException("O motorista " + driver.getName() + " já está escalado na viagem " + driverConflicts.get(0) + " no mesmo período.");
+            }
+        }
     }
 
     private void replacePassengersIfProvided(Trip trip, List<TripPassengerRequestDTO> requests) {
@@ -180,12 +247,21 @@ public class TripService {
         if (ids == null || ids.isEmpty()) {
             return new HashSet<>();
         }
-        return new HashSet<>(collaboratorRepository.findAllById(ids));
+        List<br.com.marazulturismo.marazulbackendadmin.model.Collaborator> drivers = collaboratorRepository.findAllById(ids);
+
+        if(drivers.size() < ids.size()) {
+            Set<Long> foundIds = new HashSet<>();
+            drivers.forEach(driver -> foundIds.add(driver.getId()));
+            Long missingId = ids.stream().filter(id -> !foundIds.contains(id)).findFirst().orElseThrow();
+            throw new EmployeeNotFoundException(missingId);
+        }
+        return new HashSet<>(drivers);
+
     }
 
     private br.com.marazulturismo.marazulbackendadmin.model.City findCity(Long id) {
         return cityRepository.findById(id)
-                .orElseThrow(() -> new TripValidationException("Cidade não encontrada: " + id));
+                .orElseThrow(() -> new CityNotFoundException(id));
     }
 
     private Vehicle findVehicle(Long id) {

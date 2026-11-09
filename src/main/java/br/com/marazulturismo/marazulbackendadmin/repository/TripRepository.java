@@ -35,4 +35,22 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
                                 @Param("periodStart") LocalDateTime periodStart,
                                 @Param("periodEnd") LocalDateTime periodEnd,
                                 @Param("excludeTripId") Long excludeTripId);
+
+    @Query("select t.id from Trip t where t.vehicle.id = :vehicleId " +
+            "and (:excludeTripId is null or t.id != :excludeTripId) " +
+            "and t.plannedDepartureOrigin < :periodEnd and t.plannedArrivalOrigin > :periodStart " +
+            "order by t.plannedDepartureOrigin")
+    List<Long> findVehicleOverlapIds(@Param("vehicleId") Long vehicleId,
+                                     @Param("periodStart") LocalDateTime periodStart,
+                                     @Param("periodEnd") LocalDateTime periodEnd,
+                                     @Param("excludeTripId") Long excludeTripId);
+
+    @Query("select t.id from Trip t join t.drivers d where d.id = :driverId " +
+            "and (:excludeTripId is null or t.id != :excludeTripId) " +
+            "and t.plannedDepartureOrigin < :periodEnd and t.plannedArrivalOrigin > :periodStart " +
+            "order by t.plannedDepartureOrigin")
+    List<Long> findDriverOverlapIds(@Param("driverId") Long driverId,
+                                    @Param("periodStart") LocalDateTime periodStart,
+                                    @Param("periodEnd") LocalDateTime periodEnd,
+                                    @Param("excludeTripId") Long excludeTripId);
 }
