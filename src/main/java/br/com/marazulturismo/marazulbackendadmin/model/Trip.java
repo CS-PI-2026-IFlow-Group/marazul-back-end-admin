@@ -43,6 +43,18 @@ public class Trip {
     @Column(name = "planned_arrival_origin", nullable = false)
     private LocalDateTime plannedArrivalOrigin;
 
+    @Column(name = "departure_origin")
+    private LocalDateTime departureOrigin;
+
+    @Column(name = "arrival_destination")
+    private LocalDateTime arrivalDestination;
+
+    @Column(name = "departure_destination")
+    private LocalDateTime departureDestination;
+
+    @Column(name = "arrival_origin")
+    private LocalDateTime arrivalOrigin;
+    
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
