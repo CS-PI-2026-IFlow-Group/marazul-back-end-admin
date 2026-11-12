@@ -8,7 +8,9 @@ public record ClientListResponseDTO(
         String cpf,
         String cnpj,
         String city,
-        String state
+        String state,
+        String phone,
+        String email
 ) {
     public static ClientListResponseDTO fromEntity(Client client) {
         String city = null;
@@ -25,7 +27,9 @@ public record ClientListResponseDTO(
                 client.getCpf(),
                 client.getCnpj(),
                 city,
-                state
+                state,
+                client.getPhone(),
+                client.getEmail()
         );
     }
 }

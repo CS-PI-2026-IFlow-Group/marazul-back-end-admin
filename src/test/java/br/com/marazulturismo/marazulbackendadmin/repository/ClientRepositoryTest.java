@@ -31,6 +31,33 @@ class ClientRepositoryTest {
 
     private City city;
 
+    @Test
+    void contact_isOptionalAndNormalizedWhenPersistedAndUpdated() {
+        Client client = clientRepository.saveAndFlush(
+                new Client("Contato", "11144477735", null, persistAddress("111")));
+        Long id = client.getId();
+        entityManager.clear();
+
+        client = clientRepository.findById(id).orElseThrow();
+        assertThat(client.getPhone()).isNull();
+        assertThat(client.getEmail()).isNull();
+
+        client.updateContact("(11) 99999-1234", "  PESSOA@Example.COM  ");
+        clientRepository.saveAndFlush(client);
+        entityManager.clear();
+
+        client = clientRepository.findById(id).orElseThrow();
+        assertThat(client.getPhone()).isEqualTo("11999991234");
+        assertThat(client.getEmail()).isEqualTo("pessoa@example.com");
+
+        client.updateContact(" ", " ");
+        clientRepository.saveAndFlush(client);
+        entityManager.clear();
+        client = clientRepository.findById(id).orElseThrow();
+        assertThat(client.getPhone()).isNull();
+        assertThat(client.getEmail()).isNull();
+    }
+
     @BeforeEach
     void setUp() {
         city = cityRepository.findAll().get(0);
