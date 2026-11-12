@@ -58,8 +58,8 @@ public class Client {
     }
 
     public void updateContact(String phone, String email) {
-        this.phone = phone;
-        this.email = email;
+        this.phone = normalizeDocument(phone);
+        this.email = email == null || email.isBlank() ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
     @PrePersist

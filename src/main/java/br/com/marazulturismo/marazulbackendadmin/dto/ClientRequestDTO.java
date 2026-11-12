@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Email;
+import java.util.Locale;
 
 public record ClientRequestDTO(
 
@@ -22,8 +24,17 @@ public record ClientRequestDTO(
 
         @NotNull(message = "O endereço é obrigatório.")
         @Valid
-        AddressRequestDTO address
+        AddressRequestDTO address,
+
+        String phone,
+
+        @Email(message = "O e-mail informado é inválido.")
+        String email
 ) {
+
+    public ClientRequestDTO {
+        email = email == null || email.isBlank() ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
 
     public static String normalizeDocument(String document) {
         if (document == null || document.isBlank()) {
