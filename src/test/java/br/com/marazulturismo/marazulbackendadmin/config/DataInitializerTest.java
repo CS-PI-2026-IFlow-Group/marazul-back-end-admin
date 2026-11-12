@@ -89,7 +89,8 @@ class DataInitializerTest {
                         tuple("viagens", "create"),
                         tuple("viagens", "view"),
                         tuple("viagens", "edit"),
-                        tuple("viagens", "delete"));
+                        tuple("viagens", "delete"),
+                        tuple("relatorios", "view"));
         assertThat(adminProfile().getPermissions()).containsExactlyInAnyOrderElementsOf(permissions);
     }
 

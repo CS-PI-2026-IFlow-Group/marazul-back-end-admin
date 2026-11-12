@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${titulo}">Relatorio</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 9pt;
+            color: #111111;
+        }
+
+        .cabecalho {
+            border-bottom: 2px solid #111111;
+            padding-bottom: 6pt;
+            margin-bottom: 12pt;
+        }
+
+        .empresa {
+            font-size: 15pt;
+            font-weight: bold;
+        }
+
+        .titulo {
+            font-size: 12pt;
+            margin-top: 2pt;
+        }
+
+        .meta {
+            font-size: 8pt;
+            color: #444444;
+            margin-top: 2pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            background-color: #eeeeee;
+            border-bottom: 1px solid #999999;
+            padding: 4pt;
+            font-size: 8pt;
+        }
+
+        tbody td {
+            border-bottom: 1px solid #dddddd;
+            padding: 4pt;
+        }
+
+        .vazio {
+            padding: 12pt;
+            text-align: center;
+            color: #666666;
+        }
+
+        .totais {
+            margin-top: 12pt;
+            border-top: 2px solid #111111;
+            padding-top: 6pt;
+        }
+
+        .total {
+            font-weight: bold;
+            padding: 2pt 0;
+        }
+    </style>
+</head>
+<body>
+<div class="cabecalho">
+    <div class="empresa" th:text="${empresa}">Marazul Turismo</div>
+    <div class="titulo" th:text="${titulo}">Relatorio</div>
+    <div class="meta" th:if="${periodo != null}" th:text="'Período: ' + ${periodo}">Periodo</div>
+    <div class="meta" th:text="'Emitido em: ' + ${emitidoEm}">Emitido em</div>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th th:each="coluna : ${colunas}"
+            th:text="${coluna.titulo}"
+            th:style="'text-align: ' + ${coluna.alinhamento}">Coluna</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="linha : ${linhas}">
+        <td th:each="celula, iter : ${linha}"
+            th:text="${celula}"
+            th:style="'text-align: ' + ${colunas[iter.index].alinhamento}">Valor</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(linhas)}">
+        <td class="vazio" th:attr="colspan=${#lists.size(colunas)}">Nenhum registro encontrado para o período informado.</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="totais" th:if="${not #lists.isEmpty(totais)}">
+    <div class="total" th:each="total : ${totais}" th:text="${total.titulo} + ': ' + ${total.valor}">Total</div>
+</div>
+</body>
+</html>
