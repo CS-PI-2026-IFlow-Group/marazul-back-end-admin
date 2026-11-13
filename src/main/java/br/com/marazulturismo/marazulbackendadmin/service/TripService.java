@@ -4,6 +4,7 @@ import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.exception.CityNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
@@ -29,12 +30,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Service
 public class TripService {
+
+    private static final Set<TripStatus> EDITABLE_STATUSES = EnumSet.of(TripStatus.SCHEDULED, TripStatus.CONFIRMED);
 
     private final TripRepository tripRepository;
     private final CityRepository cityRepository;
@@ -96,7 +100,13 @@ public class TripService {
     @Transactional
     public TripResponseDTO update(Long id, TripRequestDTO dto) {
         Trip trip = findEntity(id);
+        validateNotStarted(trip);
+        validateRouteAndSchedule(dto);
         Vehicle vehicle = findVehicle(dto.vehicleId());
+        validateVehicle(vehicle);
+        Set<Collaborator> drivers = findDrivers(dto.driverIds());
+        validateDrivers(drivers);
+        validateScheduleConflicts(dto, vehicle, drivers, trip.getId());
         trip.update(
                 findCity(dto.originCityId()),
                 findCity(dto.destinationCityId()),
@@ -105,7 +115,7 @@ public class TripService {
                 dto.plannedDepartureDestination(),
                 dto.plannedArrivalOrigin(),
                 vehicle,
-                findDrivers(dto.driverIds()),
+                drivers,
                 findClient(dto.clientId()),
                 dto.minimumPassengers(),
                 dto.estimatedPassengerAmount(),
@@ -131,6 +141,13 @@ public class TripService {
         }
         trip.confirm();
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
+    }
+
+    private void validateNotStarted(Trip trip) {
+        if (!EDITABLE_STATUSES.contains(trip.getStatus())) {
+            throw new TripValidationException("A viagem " + trip.getId() + " já saiu da origem e está em andamento ("
+                    + trip.getStatus().getLabel().toLowerCase() + "), por isso não pode ser alterada.");
+        }
     }
 
     private void validateRouteAndSchedule(TripRequestDTO dto) {
