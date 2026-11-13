@@ -3,16 +3,21 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 import br.com.marazulturismo.marazulbackendadmin.enums.BodyworkModel;
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
+import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.model.Vehicle;
 import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.PassengerRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.TripRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +40,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -71,6 +78,12 @@ public class TripControllerTest {
 
     @Autowired
     private ProfileRepository profileRepository;
+
+    @Autowired
+    private TripRepository tripRepository;
+
+    @Autowired
+    private PassengerRepository passengerRepository;
 
     private Profile adminProfile;
     private String token;
@@ -287,6 +300,222 @@ public class TripControllerTest {
         body.put("plannedArrivalOrigin", ARRIVAL_ORIGIN.plusDays(1).plusHours(4).toString());
 
         schedule(body).andExpect(status().isCreated());
+    }
+
+    @Test
+    void update_withValidRequest_returns200AndTheChangeAppearsInTheQuery() throws Exception {
+        long id = scheduledId(validTrip());
+        Vehicle otherVehicle = saveVehicle("T005", "TRP0A05", VehicleStatus.ACTIVE);
+        Collaborator otherDriver = saveDriver("Motorista Dois", Position.DRIVER, new CNH("55566677788", CNHType.D));
+        LocalDateTime newDeparture = DEPARTURE_ORIGIN.plusDays(1);
+        Map<String, Object> body = validTrip();
+        body.put("destinationCityId", cityRepository.findAll().get(2).getId());
+        body.put("plannedDepartureOrigin", newDeparture.toString());
+        body.put("plannedArrivalDestination", ARRIVAL_DESTINATION.plusDays(1).toString());
+        body.put("plannedDepartureDestination", DEPARTURE_DESTINATION.plusDays(1).toString());
+        body.put("plannedArrivalOrigin", ARRIVAL_ORIGIN.plusDays(1).toString());
+        body.put("vehicleId", otherVehicle.getId());
+        body.put("driverIds", List.of(otherDriver.getId()));
+        body.put("minimumPassengers", 10);
+        body.put("notes", "Remarcada a pedido do cliente");
+
+        update(id, body)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id));
+
+        mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.destinationCityId").value(cityRepository.findAll().get(2).getId()))
+                .andExpect(jsonPath("$.plannedDepartureOrigin").value(containsString(newDeparture.toLocalDate().toString())))
+                .andExpect(jsonPath("$.vehicleId").value(otherVehicle.getId()))
+                .andExpect(jsonPath("$.minimumPassengers").value(10))
+                .andExpect(jsonPath("$.notes").value("Remarcada a pedido do cliente"));
+    }
+
+    @Test
+    void update_keepingTheSamePeriod_doesNotConflictWithItself() throws Exception {
+        long id = scheduledId(validTrip());
+        Map<String, Object> body = validTrip();
+        body.put("notes", "Só a observação mudou");
+
+        update(id, body).andExpect(status().isOk());
+    }
+
+    @Test
+    void update_appliesTheSameRefusalsAsScheduling() throws Exception {
+        long id = scheduledId(validTrip());
+
+        Map<String, Object> sameCity = validTrip();
+        sameCity.put("destinationCityId", origin.getId());
+        update(id, sameCity)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("diferente da cidade de origem")));
+
+        Map<String, Object> past = validTrip();
+        past.put("plannedDepartureOrigin", LocalDateTime.now().minusDays(1).toString());
+        update(id, past)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("não pode estar no passado")));
+
+        Map<String, Object> inactiveVehicle = validTrip();
+        inactiveVehicle.put("vehicleId", saveVehicle("T006", "TRP0A06", VehicleStatus.INACTIVE).getId());
+        update(id, inactiveVehicle)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("inativo")));
+
+        Map<String, Object> notDriver = validTrip();
+        notDriver.put("driverIds", List.of(saveDriver("Atendente", Position.OTHER, null).getId()));
+        update(id, notDriver)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("não é motorista")));
+
+        Map<String, Object> withoutDrivers = validTrip();
+        withoutDrivers.put("driverIds", List.of());
+        update(id, withoutDrivers)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.driverIds").value("Informe ao menos um motorista."));
+    }
+
+    @Test
+    void update_intoAnotherTripsVehicleSchedule_returns400NamingThatTrip() throws Exception {
+        long firstTrip = scheduledId(validTrip());
+        Map<String, Object> other = validTrip();
+        other.put("vehicleId", saveVehicle("T007", "TRP0A07", VehicleStatus.ACTIVE).getId());
+        other.put("driverIds", List.of(saveDriver("Motorista Três", Position.DRIVER, new CNH("99988877766", CNHType.D)).getId()));
+        long secondTrip = scheduledId(other);
+
+        other.put("vehicleId", vehicle.getId());
+        update(secondTrip, other)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("viagem " + firstTrip)));
+    }
+
+    @Test
+    void update_keepsTheCurrentStatus() throws Exception {
+        long id = scheduledId(validTrip());
+        mockMvc.perform(post("/api/viagens/{id}/confirmar", id).header("Authorization", token))
+                .andExpect(status().isOk());
+
+        update(id, validTrip())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+    }
+
+    @Test
+    void update_afterLeavingOrigin_returns400SayingItIsInProgress() throws Exception {
+        long id = scheduledId(validTrip());
+        markAsLeftOrigin(id);
+
+        update(id, validTrip())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("em andamento")))
+                .andExpect(jsonPath("$.message").value(containsString("não pode ser alterada")));
+
+        mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(jsonPath("$.status").value("LEFT_ORIGIN"));
+    }
+
+    @Test
+    void update_toVehicleWithFewerSeatsThanLinkedPassengers_returns400WithCapacityAndCount() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("passengers", List.of(
+                Map.of("passengerId", savePassenger("Passageiro A", "100.000.000-01").getId()),
+                Map.of("passengerId", savePassenger("Passageiro B", "100.000.000-02").getId()),
+                Map.of("passengerId", savePassenger("Passageiro C", "100.000.000-03").getId())));
+        long id = scheduledId(body);
+
+        Map<String, Object> smallerVehicle = validTrip();
+        smallerVehicle.put("vehicleId", vehicleRepository.save(new Vehicle(
+                "T008", "TRP0A08", BodyworkModel.MARCOPOLO,
+                VehicleType.LD, 2023, 2, null, VehicleStatus.ACTIVE)).getId());
+
+        update(id, smallerVehicle)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("2 assentos")))
+                .andExpect(jsonPath("$.erro").value(containsString("3 passageiros")));
+    }
+
+    @Test
+    void update_withoutSendingPassengers_keepsTheLinkedOnes() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("passengers", List.of(Map.of("passengerId", savePassenger("Passageiro D", "100.000.000-04").getId())));
+        long id = scheduledId(body);
+
+        update(id, validTrip())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passengers.length()").value(1));
+    }
+
+    @Test
+    void update_resendingTheSchedulingPayloadWithItsPassengers_returns200() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("passengers", List.of(Map.of("passengerId", savePassenger("Passageiro E", "100.000.000-05").getId())));
+        long id = scheduledId(body);
+
+        update(id, body)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passengers.length()").value(1));
+    }
+
+    @Test
+    void update_unknownTrip_returns404() throws Exception {
+        update(999999L, validTrip())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").exists());
+    }
+
+    @Test
+    void delete_returns204AndTheTripLeavesTheQuery() throws Exception {
+        long id = scheduledId(validTrip());
+
+        mockMvc.perform(delete("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/viagens").header("Authorization", token))
+                .andExpect(jsonPath("$[?(@.id == " + id + ")]").isEmpty());
+    }
+
+    @Test
+    void delete_afterLeavingOrigin_returns400AndKeepsTheTrip() throws Exception {
+        long id = scheduledId(validTrip());
+        markAsLeftOrigin(id);
+
+        mockMvc.perform(delete("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("não pode ser cancelada")));
+
+        mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void delete_unknownTrip_returns404() throws Exception {
+        mockMvc.perform(delete("/api/viagens/{id}", 999999L).header("Authorization", token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").exists());
+    }
+
+    private ResultActions update(long id, Map<String, Object> body) throws Exception {
+        return mockMvc.perform(put("/api/viagens/{id}", id)
+                .header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
+    private void markAsLeftOrigin(long id) {
+        Trip trip = tripRepository.findById(id).orElseThrow();
+        trip.update(trip.getOriginCity(), trip.getDestinationCity(),
+                trip.getPlannedDepartureOrigin(), trip.getPlannedArrivalDestination(),
+                trip.getPlannedDepartureDestination(), trip.getPlannedArrivalOrigin(),
+                trip.getVehicle(), trip.getDrivers(), trip.getClient(),
+                trip.getMinimumPassengers(), trip.getNotes(), TripStatus.LEFT_ORIGIN);
+        tripRepository.saveAndFlush(trip);
+    }
+
+    private Passenger savePassenger(String name, String cpf) {
+        return passengerRepository.save(new Passenger(name, cpf, null));
     }
 
     private Map<String, Object> validTrip() {
