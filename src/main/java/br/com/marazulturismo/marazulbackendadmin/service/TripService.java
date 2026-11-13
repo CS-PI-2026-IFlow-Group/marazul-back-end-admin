@@ -100,10 +100,12 @@ public class TripService {
     @Transactional
     public TripResponseDTO update(Long id, TripRequestDTO dto) {
         Trip trip = findEntity(id);
-        validateNotStarted(trip);
+        validateNotStarted(trip, "alterada");
         validateRouteAndSchedule(dto);
         Vehicle vehicle = findVehicle(dto.vehicleId());
         validateVehicle(vehicle);
+        validateCapacityForPassengers(vehicle, dto.passengers() != null
+                ? dto.passengers().size() : trip.getPassengers().size());
         Set<Collaborator> drivers = findDrivers(dto.driverIds());
         validateDrivers(drivers);
         validateScheduleConflicts(dto, vehicle, drivers, trip.getId());
@@ -129,7 +131,9 @@ public class TripService {
 
     @Transactional
     public void delete(Long id) {
-        tripRepository.delete(findEntity(id));
+        Trip trip = findEntity(id);
+        validateNotStarted(trip, "cancelada");
+        tripRepository.delete(trip);
     }
 
     @Transactional
@@ -143,10 +147,17 @@ public class TripService {
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
 
-    private void validateNotStarted(Trip trip) {
+    private void validateNotStarted(Trip trip, String action) {
         if (!EDITABLE_STATUSES.contains(trip.getStatus())) {
             throw new TripValidationException("A viagem " + trip.getId() + " já saiu da origem e está em andamento ("
-                    + trip.getStatus().getLabel().toLowerCase() + "), por isso não pode ser alterada.");
+                    + trip.getStatus().getLabel().toLowerCase() + "), por isso não pode ser " + action + ".");
+        }
+    }
+
+    private void validateCapacityForPassengers(Vehicle vehicle, int passengerCount) {
+        if (vehicle.getSeats() != null && vehicle.getSeats() < passengerCount) {
+            throw new TripValidationException("O ônibus " + vehicle.getPrefix() + " tem " + vehicle.getSeats()
+                    + " assentos, menos do que os " + passengerCount + " passageiros vinculados à viagem.");
         }
     }
 
