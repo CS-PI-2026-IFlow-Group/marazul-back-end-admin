@@ -88,6 +88,8 @@ public class SecurityConfig {
                         .hasAuthority("viagens:view")
                         .requestMatchers(HttpMethod.PUT, "/api/viagens/**")
                         .hasAuthority("viagens:edit")
+                        .requestMatchers(HttpMethod.PATCH, "/api/viagens/**")
+                        .hasAuthority("viagens:edit")
                         .requestMatchers(HttpMethod.DELETE, "/api/viagens/**")
                         .hasAuthority("viagens:delete")
                         .anyRequest().authenticated())

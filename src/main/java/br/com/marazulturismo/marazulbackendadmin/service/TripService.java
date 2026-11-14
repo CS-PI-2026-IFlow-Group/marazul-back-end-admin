@@ -3,7 +3,9 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripStatusRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.exception.CityNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.ClientNotFoundException;
@@ -130,6 +132,22 @@ public class TripService {
                     + trip.getMinimumPassengers() + " passageiros para ser confirmada.");
         }
         trip.confirm();
+        return TripResponseDTO.fromEntity(tripRepository.save(trip));
+    }
+
+    @Transactional 
+    public TripResponseDTO changeStatus(Long id, TripStatusRequestDTO dto) {
+        Trip trip = findEntity(id);
+        TripStatus current = trip.getStatus();
+        if (current == TripStatus.COMPLETED) {
+            throw new TripValidationException("A viagem já foi concluída e não aceita nova mudança de situação." );
+        }
+        TripStatus next = current.next();
+        if (dto.status() != next) {
+            throw new TripValidationException("A viagem está \"" + current.getLabel() + "\" e só pode avançar para \"" + next.getLabel() + "\".");
+        }
+        LocalDateTime when = dto.dataHora() != null ? dto.dataHora() : LocalDateTime.now();
+        trip.advanceTo(next, when);
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
 

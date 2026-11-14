@@ -151,6 +151,17 @@ public class Trip {
         this.status = TripStatus.CONFIRMED;
     }
 
+    public void advanceTo(TripStatus newStatus, LocalDateTime when) {
+        switch (newStatus) {
+            case LEFT_ORIGIN -> this.departureOrigin = when;
+            case ARRIVED_DESTINATION -> this.arrivalDestination = when;
+            case LEFT_DESTINATION -> this.departureDestination = when;
+            case ARRIVED_ORIGIN -> this.arrivalOrigin = when;
+            default -> { }
+        }
+        this.status = newStatus;
+    }
+
     public List<TripPassenger> getPassengers() {
         return Collections.unmodifiableList(passengers);
     }
