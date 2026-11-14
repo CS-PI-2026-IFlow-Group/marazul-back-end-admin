@@ -1,6 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripExpenseRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
@@ -14,6 +15,7 @@ import br.com.marazulturismo.marazulbackendadmin.exception.TripNotFoundException
 import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationException;
 import br.com.marazulturismo.marazulbackendadmin.exception.VehicleNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.model.Expense;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.model.TripPassenger;
@@ -70,6 +72,7 @@ public class TripService {
 
     @Transactional
     public TripResponseDTO create(TripRequestDTO dto) {
+        validateEstimatedValues(dto);
         validateRouteAndSchedule(dto);
         Vehicle vehicle = findVehicle(dto.vehicleId());
         validateVehicle(vehicle);
@@ -91,14 +94,17 @@ public class TripService {
         trip.update(trip.getOriginCity(), trip.getDestinationCity(), trip.getPlannedDepartureOrigin(),
                 trip.getPlannedArrivalDestination(), trip.getPlannedDepartureDestination(),
                 trip.getPlannedArrivalOrigin(), vehicle, trip.getDrivers(), trip.getClient(),
-                dto.minimumPassengers(), dto.estimatedPassengerAmount(), dto.notes(), null, trip.getStatus());
+                dto.minimumPassengers(), dto.estimatedPassengerAmount(), dto.estimatedTotalValue(),
+                dto.estimatedIndividualValue(), dto.notes(), null, trip.getStatus());
         replacePassengersIfProvided(trip, dto.passengers());
+            replaceExpensesIfProvided(trip, dto.expenses());
         trip.setResponsiblePassenger(resolveResponsible(dto.responsiblePassengerId(), trip.getPassengers()));
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
 
     @Transactional
     public TripResponseDTO update(Long id, TripRequestDTO dto) {
+        validateEstimatedValues(dto);
         Trip trip = findEntity(id);
         validateNotStarted(trip, "alterada");
         validateRouteAndSchedule(dto);
@@ -121,10 +127,13 @@ public class TripService {
                 findClient(dto.clientId()),
                 dto.minimumPassengers(),
                 dto.estimatedPassengerAmount(),
+                dto.estimatedTotalValue(),
+                dto.estimatedIndividualValue(),
                 dto.notes(),
                 trip.getResponsiblePassenger(),
                 trip.getStatus());
         replacePassengersIfProvided(trip, dto.passengers());
+        replaceExpensesIfProvided(trip, dto.expenses());
         trip.setResponsiblePassenger(resolveResponsible(dto.responsiblePassengerId(), trip.getPassengers()));
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
@@ -241,6 +250,33 @@ public class TripService {
             passengers.add(new TripPassenger(null, passenger, amountDue, amountPaid));
         }
         trip.replacePassengers(passengers);
+    }
+
+    private void replaceExpensesIfProvided(Trip trip, List<TripExpenseRequestDTO> requests) {
+        if (requests == null) {
+            return;
+        }
+
+        List<Expense> expenses = new ArrayList<>();
+        for (TripExpenseRequestDTO request : requests) {
+            if (request == null || request.description() == null || request.description().isBlank()) {
+                throw new TripValidationException("A descrição do gasto é obrigatória.");
+            }
+            if (request.amount() == null || request.amount().signum() <= 0) {
+                throw new TripValidationException("O valor do gasto deve ser maior que zero.");
+            }
+            expenses.add(new Expense(request.description().trim(), request.amount()));
+        }
+        trip.replaceExpenses(expenses);
+    }
+
+    private void validateEstimatedValues(TripRequestDTO dto) {
+        if (dto.estimatedTotalValue() != null && dto.estimatedTotalValue().signum() < 0) {
+            throw new TripValidationException("O valor estimado total não pode ser negativo.");
+        }
+        if (dto.estimatedIndividualValue() != null && dto.estimatedIndividualValue().signum() < 0) {
+            throw new TripValidationException("O valor estimado por passageiro não pode ser negativo.");
+        }
     }
 
     private void validateAmounts(BigDecimal amountDue, BigDecimal amountPaid) {
