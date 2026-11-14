@@ -144,6 +144,75 @@ public class TripControllerTest {
     }
 
     @Test
+    void create_withExpensesCalculatesTotalsAndIndividualValueFromMinimumPassengers() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("minimumPassengers", 3);
+        body.put("expenses", List.of(
+                Map.of("description", "Pedágio", "amount", 25.00),
+                Map.of("description", "Combustível", "amount", 44.99)));
+
+        schedule(body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.expenses.length()").value(2))
+                .andExpect(jsonPath("$.totalExpenses").value(69.99))
+                .andExpect(jsonPath("$.estimatedTotalValue").value(69.99))
+                .andExpect(jsonPath("$.estimatedIndividualValue").value(23.33));
+    }
+
+    @Test
+    void create_withExpensesAndPassengersUsesPassengerCountForIndividualValue() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("minimumPassengers", 3);
+        body.put("expenses", List.of(Map.of("description", "Pedágio", "amount", 69.99)));
+        body.put("passengers", List.of(
+                Map.of("passengerId", savePassenger("Passageiro Um", "100.000.000-11").getId()),
+                Map.of("passengerId", savePassenger("Passageiro Dois", "100.000.000-12").getId())));
+
+        schedule(body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estimatedTotalValue").value(69.99))
+                .andExpect(jsonPath("$.estimatedIndividualValue").value(35.00));
+    }
+
+    @Test
+    void create_rejectsInvalidExpensesAndNegativeEstimatedValues() throws Exception {
+        Map<String, Object> blankDescription = validTrip();
+        blankDescription.put("expenses", List.of(Map.of("description", "  ", "amount", 10.00)));
+        schedule(blankDescription).andExpect(status().isBadRequest());
+
+        Map<String, Object> zeroAmount = validTrip();
+        zeroAmount.put("expenses", List.of(Map.of("description", "Pedágio", "amount", 0)));
+        schedule(zeroAmount).andExpect(status().isBadRequest());
+
+        Map<String, Object> negativeTotal = validTrip();
+        negativeTotal.put("estimatedTotalValue", -1.00);
+        schedule(negativeTotal).andExpect(status().isBadRequest());
+
+        Map<String, Object> negativeIndividual = validTrip();
+        negativeIndividual.put("estimatedIndividualValue", -1.00);
+        schedule(negativeIndividual).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void update_preservesExpensesWhenOmittedAndRemovesThemWhenEmpty() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("expenses", List.of(Map.of("description", "Pedágio", "amount", 50.00)));
+        long id = scheduledId(body);
+
+        update(id, validTrip())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses.length()").value(1))
+                .andExpect(jsonPath("$.totalExpenses").value(50.00));
+
+        Map<String, Object> emptyExpenses = validTrip();
+        emptyExpenses.put("expenses", List.of());
+        update(id, emptyExpenses)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses.length()").value(0))
+                .andExpect(jsonPath("$.totalExpenses").value(0));
+    }
+
+    @Test
     void create_withoutOriginCity_returns400NamingTheField() throws Exception {
         Map<String, Object> body = validTrip();
         body.remove("originCityId");
