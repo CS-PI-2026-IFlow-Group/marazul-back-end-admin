@@ -50,9 +50,6 @@ class TripSecurityTest {
     /** Token de um usuário cujo perfil NÃO tem permissões de viagens. */
     private String tokenSemPermissaoViagens;
 
-    /** Token do admin (com todas as permissões). */
-    private String tokenAdmin;
-
     @BeforeEach
     void setUp() {
         // Perfil sem nenhuma permissão de viagens (apenas frota:view como exemplo)
@@ -74,20 +71,6 @@ class TripSecurityTest {
                 "hash-irrelevante"));
 
         tokenSemPermissaoViagens = "Bearer " + jwtService.generateToken(userLimitado);
-
-        // Token admin com todas as permissões
-        Collaborator admin = collaboratorRepository.save(new Collaborator(
-                "Admin Segurança",
-                new Date(),
-                Position.DRIVER,
-                true,
-                profileRepository.findByName("Administrador").orElseThrow(),
-                "admin.seguranca@marazul.test",
-                null,
-                null,
-                "hash-irrelevante"));
-
-        tokenAdmin = "Bearer " + jwtService.generateToken(admin);
     }
 
     @Test
@@ -143,5 +126,19 @@ class TripSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"CONFIRMED\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void put_viagens_withoutToken_returns401() throws Exception {
+        mockMvc.perform(put("/api/viagens/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void delete_viagens_withoutToken_returns401() throws Exception {
+        mockMvc.perform(delete("/api/viagens/{id}", 1))
+                .andExpect(status().isUnauthorized());
     }
 }

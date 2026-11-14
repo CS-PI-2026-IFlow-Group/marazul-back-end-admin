@@ -9,8 +9,10 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -167,13 +169,28 @@ public class Trip {
     }
 
     public void replacePassengers(List<TripPassenger> newPassengers) {
-        this.passengers.clear();
+        Map<Long, TripPassenger> currentByPassengerId = new HashMap<>();
+        for (TripPassenger current : this.passengers) {
+            currentByPassengerId.put(current.getPassenger().getId(), current);
+        }
+
+        List<TripPassenger> kept = new ArrayList<>();
+        List<TripPassenger> added = new ArrayList<>();
         if (newPassengers != null) {
             for (TripPassenger tp : newPassengers) {
-                tp.assignTrip(this);
-                this.passengers.add(tp);
+                TripPassenger existing = currentByPassengerId.get(tp.getPassenger().getId());
+                if (existing != null) {
+                    existing.updateAmounts(tp.getAmountDue(), tp.getAmountPaid());
+                    kept.add(existing);
+                } else {
+                    tp.assignTrip(this);
+                    added.add(tp);
+                }
             }
         }
+
+        this.passengers.removeIf(current -> !kept.contains(current));
+        this.passengers.addAll(added);
     }
 
     public void addPassenger(TripPassenger tripPassenger) {

@@ -88,6 +88,8 @@ class ClientControllerTest {
                 {
                   "name": "Cliente Consulta",
                   "cpf": "529.982.247-25",
+                  "phone": "(11) 99999-1234",
+                  "email": "  TESTE@Example.COM  ",
                   "address": {
                     "street": "Rua das Flores",
                     "number": "42",
@@ -102,6 +104,8 @@ class ClientControllerTest {
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.cpf").value("52998224725"))
+                .andExpect(jsonPath("$.phone").value("11999991234"))
+                .andExpect(jsonPath("$.email").value("teste@example.com"))
                 .andExpect(jsonPath("$.address.cityId").value(city.getId()))
                 .andExpect(jsonPath("$.address.city").value(city.getName()))
                 .andExpect(jsonPath("$.address.state").value(city.getState().getAcronym()));
@@ -110,12 +114,28 @@ class ClientControllerTest {
                         .header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Cliente Consulta"));
+                .andExpect(jsonPath("$[0].name").value("Cliente Consulta"))
+                .andExpect(jsonPath("$[0].email").value("teste@example.com"));
 
         Long id = clientRepository.findAll().get(0).getId();
         mockMvc.perform(get("/api/clientes/{id}", id).header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.address.city").value(city.getName()));
+                .andExpect(jsonPath("$.address.city").value(city.getName()))
+                .andExpect(jsonPath("$.phone").value("11999991234"));
+    }
+
+    @Test
+    void update_withInvalidEmail_returns400() throws Exception {
+        Client client = persistClient("Cliente Original", "11144477735", null, "112");
+        String payload = validCnpjPayload().replace(
+                "\"name\": \"Empresa Atualizada\",",
+                "\"name\": \"Empresa Atualizada\", \"email\": \"invalido@@teste\" ,");
+        mockMvc.perform(put("/api/clientes/{id}", client.getId())
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.email").exists());
     }
 
     @Test
