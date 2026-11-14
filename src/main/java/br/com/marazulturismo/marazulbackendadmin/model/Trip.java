@@ -147,10 +147,6 @@ public class Trip {
         this.responsiblePassenger = responsiblePassenger;
     }
 
-    public void confirm() {
-        this.status = TripStatus.CONFIRMED;
-    }
-
     public void advanceTo(TripStatus newStatus, LocalDateTime when) {
         switch (newStatus) {
             case LEFT_ORIGIN -> this.departureOrigin = when;

@@ -126,14 +126,8 @@ public class TripService {
 
     @Transactional
     public TripResponseDTO confirm(Long id) {
-        Trip trip = findEntity(id);
-        if (trip.getMinimumPassengers() != null && trip.getPassengers().size() < trip.getMinimumPassengers()) {
-            throw new TripValidationException("A viagem precisa de pelo menos "
-                    + trip.getMinimumPassengers() + " passageiros para ser confirmada.");
-        }
-        trip.confirm();
-        return TripResponseDTO.fromEntity(tripRepository.save(trip));
-    }
+        return changeStatus(id, new TripStatusRequestDTO(TripStatus.CONFIRMED, null));
+            }
 
     @Transactional 
     public TripResponseDTO changeStatus(Long id, TripStatusRequestDTO dto) {
@@ -147,10 +141,47 @@ public class TripService {
             throw new TripValidationException("A viagem está \"" + current.getLabel() + "\" e só pode avançar para \"" + next.getLabel() + "\".");
         }
         LocalDateTime when = dto.dataHora() != null ? dto.dataHora() : LocalDateTime.now();
+        if(next == TripStatus.CONFIRMED) {
+            validateConfirmation(trip);
+        }
+        validateStageTime(trip, next, when);
         trip.advanceTo(next, when);
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
+    
+    private void validateConfirmation(Trip trip) {
+        if (trip.getDrivers().isEmpty()) {
+            throw new TripValidationException("A viagem precisa de ao menos um motorista para ser confirmada.");
+        }
+        if (trip.getMinimumPassengers() != null && trip.getPassengers().size() < trip.getMinimumPassengers()) {
+            throw new TripValidationException("A viagem precisa de pelo menos "
+                    + trip.getMinimumPassengers() + " passageiros para ser confirmada.");
+        }
+    }
 
+    private void validateStageTime(Trip trip, TripStatus stage, LocalDateTime when) {
+        if (stage == TripStatus.CONFIRMED || stage == TripStatus.COMPLETED) {
+            return;
+        }
+        if (when.isAfter(LocalDateTime.now())) {
+            throw new TripValidationException("O horário informado para \"" + stage.getLabel()
+                    + "\" não pode estar no futuro.");
+        }
+        LocalDateTime previous = previousStageTime(trip, stage);
+        if (previous != null && when.isBefore(previous)) {
+            throw new TripValidationException("O horário informado para \"" + stage.getLabel()
+                    + "\" não pode ser anterior ao da etapa anterior.");
+        }
+    }
+
+    private LocalDateTime previousStageTime(Trip trip, TripStatus stage) {
+        return switch (stage) {
+            case ARRIVED_DESTINATION -> trip.getDepartureOrigin();
+            case LEFT_DESTINATION -> trip.getArrivalDestination();
+            case ARRIVED_ORIGIN -> trip.getDepartureDestination();
+            default -> null;
+        };
+    }
     private void validateRouteAndSchedule(TripRequestDTO dto) {
         if (dto.originCityId().equals(dto.destinationCityId())) {
             throw new TripValidationException("A cidade de destino deve ser diferente da cidade de origem.");
