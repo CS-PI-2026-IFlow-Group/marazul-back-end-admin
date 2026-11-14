@@ -135,4 +135,13 @@ class TripSecurityTest {
                         .content("{}"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void patch_viagens_withoutPermission_returns403() throws Exception {
+        mockMvc.perform(patch("/api/viagens/{id}/situacao", 1)
+                        .header("Authorization", tokenSemPermissaoViagens)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"CONFIRMED\"}"))
+                .andExpect(status().isForbidden());
+    }
 }

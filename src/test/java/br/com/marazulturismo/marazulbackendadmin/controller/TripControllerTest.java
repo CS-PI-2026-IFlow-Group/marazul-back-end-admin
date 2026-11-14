@@ -10,9 +10,11 @@ import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import br.com.marazulturismo.marazulbackendadmin.model.Vehicle;
+import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.repository.CityRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.TripRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,12 +35,15 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.temporal.ChronoUnit;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -50,6 +55,9 @@ public class TripControllerTest {
     private static final LocalDateTime ARRIVAL_DESTINATION = DEPARTURE_ORIGIN.plusHours(4);
     private static final LocalDateTime DEPARTURE_DESTINATION = DEPARTURE_ORIGIN.plusDays(2).plusHours(6);
     private static final LocalDateTime ARRIVAL_ORIGIN = DEPARTURE_ORIGIN.plusDays(2).plusHours(10);
+    
+    private static final String[] ALL_STAGES = {
+        "CONFIRMED", "LEFT_ORIGIN", "ARRIVED_DESTINATION", "LEFT_DESTINATION", "ARRIVED_ORIGIN", "COMPLETED"};
 
     @Autowired
     private MockMvc mockMvc;
@@ -71,6 +79,9 @@ public class TripControllerTest {
 
     @Autowired
     private ProfileRepository profileRepository;
+    
+    @Autowired
+    private TripRepository tripRepository;
 
     private Profile adminProfile;
     private String token;
@@ -289,6 +300,146 @@ public class TripControllerTest {
         schedule(body).andExpect(status().isCreated());
     }
 
+    
+    @Test
+    void advance_toNextStage_returns200AndChangesStatusInListing() throws Exception {
+        long id = scheduledId(validTrip());
+
+        advance(id, Map.of("status", "CONFIRMED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+
+        mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+    }
+
+    @Test
+    void advance_withoutInformedTime_registersTheCurrentTime() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED");
+
+        advance(id, Map.of("status", "LEFT_ORIGIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.departureOrigin").exists());
+    }
+
+    @Test
+    void advance_withInformedTime_registersThatTime() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED");
+        LocalDateTime informed = LocalDateTime.now().minusHours(2).truncatedTo(ChronoUnit.MINUTES);
+
+        advance(id, Map.of("status", "LEFT_ORIGIN", "dataHora", informed.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.departureOrigin").value(containsString(informed.toString())));
+    }
+
+    @Test
+    void advance_withFutureTime_returns400() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED");
+
+        advance(id, Map.of("status", "LEFT_ORIGIN", "dataHora", LocalDateTime.now().plusHours(1).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("não pode estar no futuro")));
+    }
+
+    @Test
+    void advance_withTimeBeforePreviousStage_returns400() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED");
+        advance(id, Map.of("status", "LEFT_ORIGIN", "dataHora", LocalDateTime.now().minusHours(2).toString()))
+                .andExpect(status().isOk());
+
+        advance(id, Map.of("status", "ARRIVED_DESTINATION", "dataHora", LocalDateTime.now().minusHours(3).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("anterior ao da etapa anterior")));
+    }
+
+    @Test
+    void advance_skippingAStage_returns400ExplainingTheNextOne() throws Exception {
+        long id = scheduledId(validTrip());
+
+        advance(id, Map.of("status", "LEFT_ORIGIN"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("só pode avançar para \"Confirmada\"")));
+    }
+
+    @Test
+    void advance_backToAPreviousStage_returns400() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED", "LEFT_ORIGIN");
+
+        advance(id, Map.of("status", "CONFIRMED"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("só pode avançar para \"Chegou ao destino\"")));
+    }
+
+    @Test
+    void advance_toConfirmedBelowMinimumPassengers_returns400() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("minimumPassengers", 2);
+        long id = scheduledId(body);
+
+        advance(id, Map.of("status", "CONFIRMED"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("pelo menos 2 passageiros")));
+    }
+
+    @Test
+    void advance_toConfirmedWithoutDrivers_returns400() throws Exception {
+        long id = tripRepository.save(new Trip(origin, destination,
+                DEPARTURE_ORIGIN, ARRIVAL_DESTINATION, DEPARTURE_DESTINATION, ARRIVAL_ORIGIN,
+                vehicle, Set.of())).getId();
+
+        advance(id, Map.of("status", "CONFIRMED"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("ao menos um motorista")));
+    }
+
+    @Test
+    void advance_onCompletedTrip_returns400() throws Exception {
+        long id = tripAdvancedThrough(ALL_STAGES);
+
+        advance(id, Map.of("status", "CONFIRMED"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("já foi concluída")));
+    }
+
+    @Test
+    void advance_unknownTrip_returns404() throws Exception {
+        advance(999999L, Map.of("status", "CONFIRMED"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void advance_withInvalidStatus_returns400() throws Exception {
+        long id = scheduledId(validTrip());
+
+        advance(id, Map.of("status", "VOANDO"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void advance_throughWholeJourney_showsPlannedAndRealizedSideBySide() throws Exception {
+        long id = tripAdvancedThrough(ALL_STAGES);
+
+        mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.plannedDepartureOrigin").exists())
+                .andExpect(jsonPath("$.departureOrigin").exists())
+                .andExpect(jsonPath("$.plannedArrivalDestination").exists())
+                .andExpect(jsonPath("$.arrivalDestination").exists())
+                .andExpect(jsonPath("$.plannedDepartureDestination").exists())
+                .andExpect(jsonPath("$.departureDestination").exists())
+                .andExpect(jsonPath("$.plannedArrivalOrigin").exists())
+                .andExpect(jsonPath("$.arrivalOrigin").exists());
+    }
+
+    @Test
+    void confirmEndpoint_onTripAlreadyUnderway_returns400() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED", "LEFT_ORIGIN");
+
+        mockMvc.perform(post("/api/viagens/{id}/confirmar", id).header("Authorization", token))
+                .andExpect(status().isBadRequest());
+    }
+
     private Map<String, Object> validTrip() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("originCityId", origin.getId());
@@ -325,5 +476,20 @@ public class TripControllerTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(json).get("id").asLong();
+    }
+    
+    private ResultActions advance(long tripId, Map<String, ?> body) throws Exception {
+        return mockMvc.perform(patch("/api/viagens/{id}/situacao", tripId)
+                .header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
+    private long tripAdvancedThrough(String... stages) throws Exception {
+        long id = scheduledId(validTrip());
+        for (String stage : stages) {
+            advance(id, Map.of("status", stage)).andExpect(status().isOk());
+        }
+        return id;
     }
 }
