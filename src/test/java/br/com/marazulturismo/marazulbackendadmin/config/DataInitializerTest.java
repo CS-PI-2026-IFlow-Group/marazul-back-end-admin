@@ -34,6 +34,7 @@ class DataInitializerTest {
             RequestMethod.POST, "create",
             RequestMethod.GET, "view",
             RequestMethod.PUT, "edit",
+            RequestMethod.PATCH, "edit",
             RequestMethod.DELETE, "delete");
 
     @Autowired

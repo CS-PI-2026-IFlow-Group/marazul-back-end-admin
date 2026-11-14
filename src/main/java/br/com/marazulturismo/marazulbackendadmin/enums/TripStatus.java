@@ -14,4 +14,6 @@ public enum TripStatus {
     TripStatus(String label) { this.label = label; }
 
     public String getLabel() { return label; }
+
+    public TripStatus next() { return this == COMPLETED ? null : values()[ordinal() + 1]; }
 }
