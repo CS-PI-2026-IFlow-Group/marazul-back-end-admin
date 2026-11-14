@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,7 +67,13 @@ public class Trip {
     private Integer minimumPassengers;
 
     @Column(name = "estimated_passenger_amount", precision = 10, scale = 2)
-    private java.math.BigDecimal estimatedPassengerAmount;
+    private BigDecimal estimatedPassengerAmount;
+
+    @Column(name = "estimated_total_value", precision = 10, scale = 2)
+    private BigDecimal estimatedTotalValue;
+
+    @Column(name = "estimated_individual_value", precision = 10, scale = 2)
+    private BigDecimal estimatedIndividualValue;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -103,18 +110,32 @@ public class Trip {
                        LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
                        LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
                        Vehicle vehicle, Set<Collaborator> drivers, Client client,
-                           Integer minimumPassengers, String notes, TripStatus status) {
-                update(originCity, destinationCity, plannedDepartureOrigin, plannedArrivalDestination,
-                    plannedDepartureDestination, plannedArrivalOrigin, vehicle, drivers, client,
-                    minimumPassengers, this.estimatedPassengerAmount, notes, this.responsiblePassenger, status);
-                }
+                       Integer minimumPassengers, String notes, TripStatus status) {
+        update(originCity, destinationCity, plannedDepartureOrigin, plannedArrivalDestination,
+                plannedDepartureDestination, plannedArrivalOrigin, vehicle, drivers, client,
+                minimumPassengers, this.estimatedPassengerAmount, this.estimatedTotalValue,
+                this.estimatedIndividualValue, notes, this.responsiblePassenger, status);
+    }
 
-                public void update(City originCity, City destinationCity,
-                           LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
-                           LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
-                           Vehicle vehicle, Set<Collaborator> drivers, Client client,
-                           Integer minimumPassengers, java.math.BigDecimal estimatedPassengerAmount,
-                           String notes, Passenger responsiblePassenger, TripStatus status) {
+    public void update(City originCity, City destinationCity,
+                       LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
+                       LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
+                       Vehicle vehicle, Set<Collaborator> drivers, Client client,
+                       Integer minimumPassengers, BigDecimal estimatedPassengerAmount,
+                       String notes, Passenger responsiblePassenger, TripStatus status) {
+        update(originCity, destinationCity, plannedDepartureOrigin, plannedArrivalDestination,
+                plannedDepartureDestination, plannedArrivalOrigin, vehicle, drivers, client,
+                minimumPassengers, estimatedPassengerAmount, this.estimatedTotalValue,
+                this.estimatedIndividualValue, notes, responsiblePassenger, status);
+    }
+
+    public void update(City originCity, City destinationCity,
+                       LocalDateTime plannedDepartureOrigin, LocalDateTime plannedArrivalDestination,
+                       LocalDateTime plannedDepartureDestination, LocalDateTime plannedArrivalOrigin,
+                       Vehicle vehicle, Set<Collaborator> drivers, Client client,
+                       Integer minimumPassengers, BigDecimal estimatedPassengerAmount,
+                       BigDecimal estimatedTotalValue, BigDecimal estimatedIndividualValue,
+                       String notes, Passenger responsiblePassenger, TripStatus status) {
         this.originCity = originCity;
         this.destinationCity = destinationCity;
         this.plannedDepartureOrigin = plannedDepartureOrigin;
@@ -126,6 +147,8 @@ public class Trip {
         this.client = client;
         this.minimumPassengers = minimumPassengers;
         this.estimatedPassengerAmount = estimatedPassengerAmount;
+        this.estimatedTotalValue = estimatedTotalValue;
+        this.estimatedIndividualValue = estimatedIndividualValue;
         this.notes = notes;
         this.responsiblePassenger = responsiblePassenger;
         if (status != null) {
