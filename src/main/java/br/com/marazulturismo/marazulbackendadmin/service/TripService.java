@@ -3,6 +3,7 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripStatusRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
@@ -138,15 +139,63 @@ public class TripService {
 
     @Transactional
     public TripResponseDTO confirm(Long id) {
+        return changeStatus(id, new TripStatusRequestDTO(TripStatus.CONFIRMED, null));
+            }
+
+    @Transactional 
+    public TripResponseDTO changeStatus(Long id, TripStatusRequestDTO dto) {
         Trip trip = findEntity(id);
+        TripStatus current = trip.getStatus();
+        if (current == TripStatus.COMPLETED) {
+            throw new TripValidationException("A viagem já foi concluída e não aceita nova mudança de situação." );
+        }
+        TripStatus next = current.next();
+        if (dto.status() != next) {
+            throw new TripValidationException("A viagem está \"" + current.getLabel() + "\" e só pode avançar para \"" + next.getLabel() + "\".");
+        }
+        LocalDateTime when = dto.dataHora() != null ? dto.dataHora() : LocalDateTime.now();
+        if(next == TripStatus.CONFIRMED) {
+            validateConfirmation(trip);
+        }
+        validateStageTime(trip, next, when);
+        trip.advanceTo(next, when);
+        return TripResponseDTO.fromEntity(tripRepository.save(trip));
+    }
+    
+    private void validateConfirmation(Trip trip) {
+        if (trip.getDrivers().isEmpty()) {
+            throw new TripValidationException("A viagem precisa de ao menos um motorista para ser confirmada.");
+        }
         if (trip.getMinimumPassengers() != null && trip.getPassengers().size() < trip.getMinimumPassengers()) {
             throw new TripValidationException("A viagem precisa de pelo menos "
                     + trip.getMinimumPassengers() + " passageiros para ser confirmada.");
         }
-        trip.confirm();
-        return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
 
+    private void validateStageTime(Trip trip, TripStatus stage, LocalDateTime when) {
+        if (stage == TripStatus.CONFIRMED || stage == TripStatus.COMPLETED) {
+            return;
+        }
+        if (when.isAfter(LocalDateTime.now())) {
+            throw new TripValidationException("O horário informado para \"" + stage.getLabel()
+                    + "\" não pode estar no futuro.");
+        }
+        LocalDateTime previous = previousStageTime(trip, stage);
+        if (previous != null && when.isBefore(previous)) {
+            throw new TripValidationException("O horário informado para \"" + stage.getLabel()
+                    + "\" não pode ser anterior ao da etapa anterior.");
+        }
+    }
+
+    private LocalDateTime previousStageTime(Trip trip, TripStatus stage) {
+        return switch (stage) {
+            case ARRIVED_DESTINATION -> trip.getDepartureOrigin();
+            case LEFT_DESTINATION -> trip.getArrivalDestination();
+            case ARRIVED_ORIGIN -> trip.getDepartureDestination();
+            default -> null;
+        };
+    }
+    
     private void validateNotStarted(Trip trip, String action) {
         if (!EDITABLE_STATUSES.contains(trip.getStatus())) {
             throw new TripValidationException("A viagem " + trip.getId() + " já saiu da origem e está em andamento ("

@@ -45,6 +45,18 @@ public class Trip {
     @Column(name = "planned_arrival_origin", nullable = false)
     private LocalDateTime plannedArrivalOrigin;
 
+    @Column(name = "departure_origin")
+    private LocalDateTime departureOrigin;
+
+    @Column(name = "arrival_destination")
+    private LocalDateTime arrivalDestination;
+
+    @Column(name = "departure_destination")
+    private LocalDateTime departureDestination;
+
+    @Column(name = "arrival_origin")
+    private LocalDateTime arrivalOrigin;
+    
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
@@ -137,8 +149,15 @@ public class Trip {
         this.responsiblePassenger = responsiblePassenger;
     }
 
-    public void confirm() {
-        this.status = TripStatus.CONFIRMED;
+    public void advanceTo(TripStatus newStatus, LocalDateTime when) {
+        switch (newStatus) {
+            case LEFT_ORIGIN -> this.departureOrigin = when;
+            case ARRIVED_DESTINATION -> this.arrivalDestination = when;
+            case LEFT_DESTINATION -> this.departureDestination = when;
+            case ARRIVED_ORIGIN -> this.arrivalOrigin = when;
+            default -> { }
+        }
+        this.status = newStatus;
     }
 
     public List<TripPassenger> getPassengers() {
