@@ -97,7 +97,7 @@ public class TripService {
                 dto.minimumPassengers(), dto.estimatedPassengerAmount(), dto.estimatedTotalValue(),
                 dto.estimatedIndividualValue(), dto.notes(), null, trip.getStatus());
         replacePassengersIfProvided(trip, dto.passengers());
-            replaceExpensesIfProvided(trip, dto.expenses());
+        replaceExpensesIfProvided(trip, dto.expenses());
         trip.setResponsiblePassenger(resolveResponsible(dto.responsiblePassengerId(), trip.getPassengers()));
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
     }
