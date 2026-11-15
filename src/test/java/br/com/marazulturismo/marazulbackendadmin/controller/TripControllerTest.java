@@ -9,6 +9,7 @@ import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
 import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
+import br.com.marazulturismo.marazulbackendadmin.repository.ExpenseRepository;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
@@ -18,6 +19,7 @@ import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorReposito
 import br.com.marazulturismo.marazulbackendadmin.repository.PassengerRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.TripRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.TripPassengerRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +45,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -90,6 +94,12 @@ public class TripControllerTest {
 
     @Autowired
     private PassengerRepository passengerRepository;
+
+        @Autowired
+        private ExpenseRepository expenseRepository;
+
+        @Autowired
+        private TripPassengerRepository tripPassengerRepository;
 
     private Profile adminProfile;
     private String token;
@@ -147,6 +157,102 @@ public class TripControllerTest {
                 .andExpect(jsonPath("$.vehicleId").value(vehicle.getId()))
                 .andExpect(jsonPath("$.minimumPassengers").doesNotExist())
                 .andExpect(jsonPath("$.notes").doesNotExist());
+    }
+
+    @Test
+    void create_withExpensesCalculatesTotalsAndIndividualValueFromMinimumPassengers() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("minimumPassengers", 3);
+        body.put("expenses", List.of(
+                Map.of("description", "Pedágio", "amount", 25.00),
+                Map.of("description", "Combustível", "amount", 44.99)));
+
+        schedule(body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.expenses.length()").value(2))
+                .andExpect(jsonPath("$.totalExpenses").value(69.99))
+                .andExpect(jsonPath("$.estimatedTotalValue").value(69.99))
+                .andExpect(jsonPath("$.estimatedIndividualValue").value(23.33));
+    }
+
+    @Test
+    void create_withExpensesAndPassengersUsesPassengerCountForIndividualValue() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("minimumPassengers", 3);
+        body.put("expenses", List.of(Map.of("description", "Pedágio", "amount", 69.99)));
+        body.put("passengers", List.of(
+                Map.of("passengerId", savePassenger("Passageiro Um", "100.000.000-11").getId()),
+                Map.of("passengerId", savePassenger("Passageiro Dois", "100.000.000-12").getId())));
+
+        schedule(body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estimatedTotalValue").value(69.99))
+                .andExpect(jsonPath("$.estimatedIndividualValue").value(35.00));
+    }
+
+    @Test
+    void create_keepsPassengerFareSeparateFromIndividualCostEstimate() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("estimatedPassengerAmount", 150.00);
+        body.put("estimatedIndividualValue", 80.00);
+        body.put("passengers", List.of(Map.of(
+                "passengerId", savePassenger("Passageiro Tarifa", "100.000.000-13").getId())));
+
+        schedule(body)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estimatedPassengerAmount").value(150.00))
+                .andExpect(jsonPath("$.estimatedIndividualValue").value(80.00))
+                .andExpect(jsonPath("$.passengers[0].amountDue").value(150.00));
+    }
+
+    @Test
+    void create_rejectsInvalidExpensesAndNegativeEstimatedValues() throws Exception {
+        Map<String, Object> blankDescription = validTrip();
+        blankDescription.put("expenses", List.of(Map.of("description", "  ", "amount", 10.00)));
+        schedule(blankDescription).andExpect(status().isBadRequest());
+
+        Map<String, Object> zeroAmount = validTrip();
+        zeroAmount.put("expenses", List.of(Map.of("description", "Pedágio", "amount", 0)));
+        schedule(zeroAmount).andExpect(status().isBadRequest());
+
+        Map<String, Object> longDescription = validTrip();
+        longDescription.put("expenses", List.of(Map.of("description", "x".repeat(256), "amount", 1.00)));
+        schedule(longDescription).andExpect(status().isBadRequest());
+
+        Map<String, Object> excessiveAmount = validTrip();
+        excessiveAmount.put("expenses", List.of(Map.of("description", "Pedágio", "amount", new BigDecimal("100000000.00"))));
+        schedule(excessiveAmount).andExpect(status().isBadRequest());
+
+        Map<String, Object> excessiveScale = validTrip();
+        excessiveScale.put("expenses", List.of(Map.of("description", "Pedágio", "amount", new BigDecimal("1.001"))));
+        schedule(excessiveScale).andExpect(status().isBadRequest());
+
+        Map<String, Object> negativeTotal = validTrip();
+        negativeTotal.put("estimatedTotalValue", -1.00);
+        schedule(negativeTotal).andExpect(status().isBadRequest());
+
+        Map<String, Object> negativeIndividual = validTrip();
+        negativeIndividual.put("estimatedIndividualValue", -1.00);
+        schedule(negativeIndividual).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void update_preservesExpensesWhenOmittedAndRemovesThemWhenEmpty() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("expenses", List.of(Map.of("description", "Pedágio", "amount", 50.00)));
+        long id = scheduledId(body);
+
+        update(id, validTrip())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses.length()").value(1))
+                .andExpect(jsonPath("$.totalExpenses").value(50.00));
+
+        Map<String, Object> emptyExpenses = validTrip();
+        emptyExpenses.put("expenses", List.of());
+        update(id, emptyExpenses)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses.length()").value(0))
+                .andExpect(jsonPath("$.totalExpenses").value(0));
     }
 
     @Test
@@ -611,8 +717,13 @@ public class TripControllerTest {
     }
 
     @Test
-    void delete_returns204AndTheTripLeavesTheQuery() throws Exception {
+        void delete_withoutPassengersOrExpenses_returns204AndTheTripLeavesTheQuery() throws Exception {
         long id = scheduledId(validTrip());
+
+                mockMvc.perform(get("/api/viagens/{id}", id).header("Authorization", token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.passengers.length()").value(0))
+                                .andExpect(jsonPath("$.expenses.length()").value(0));
 
         mockMvc.perform(delete("/api/viagens/{id}", id).header("Authorization", token))
                 .andExpect(status().isNoContent());
@@ -622,6 +733,22 @@ public class TripControllerTest {
         mockMvc.perform(get("/api/viagens").header("Authorization", token))
                 .andExpect(jsonPath("$[?(@.id == " + id + ")]").isEmpty());
     }
+
+        @Test
+        void delete_withPassengersAndExpensesRemovesTripAssociations() throws Exception {
+                Map<String, Object> body = validTrip();
+                Passenger passenger = savePassenger("Passageiro Excluído", "100.000.000-14");
+                body.put("passengers", List.of(Map.of("passengerId", passenger.getId())));
+                body.put("expenses", List.of(Map.of("description", "Combustível", "amount", 350.00)));
+                long id = scheduledId(body);
+
+                mockMvc.perform(delete("/api/viagens/{id}", id).header("Authorization", token))
+                                .andExpect(status().isNoContent());
+
+                assertThat(expenseRepository.findByTripId(id)).isEmpty();
+                assertThat(tripPassengerRepository.findByTripId(id)).isEmpty();
+                assertThat(passengerRepository.findById(passenger.getId())).isPresent();
+        }
 
     @Test
     void delete_afterLeavingOrigin_returns400AndKeepsTheTrip() throws Exception {
