@@ -770,6 +770,39 @@ public class TripControllerTest {
                 .andExpect(jsonPath("$.erro").exists());
     }
 
+    @Test
+    void list_filtersByStatusPeriodCityAndVehicle() throws Exception {
+        long tripId = scheduledId(validTrip());
+
+        mockMvc.perform(get("/api/viagens")
+                        .header("Authorization", token)
+                        .param("status", "SCHEDULED")
+                        .param("dataInicio", DEPARTURE_ORIGIN.toLocalDate().toString())
+                        .param("dataFim", DEPARTURE_ORIGIN.toLocalDate().toString())
+                        .param("cidadeId", origin.getId().toString())
+                        .param("veiculoId", vehicle.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(tripId))
+                .andExpect(jsonPath("$[0].status").value("SCHEDULED"));
+    }
+
+    @Test
+    void list_rejectsUnknownStatusWithAcceptedValues() throws Exception {
+        mockMvc.perform(get("/api/viagens")
+                        .header("Authorization", token)
+                        .param("status", "INEXISTENTE"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("SCHEDULED")));
+    }
+
+    @Test
+    void listEnums_returnsTripStatusesWithPortugueseLabels() throws Exception {
+        mockMvc.perform(get("/api/viagens/enums").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].value").value("SCHEDULED"))
+                .andExpect(jsonPath("$[0].label").value("Agendada"));
+    }
+
     private ResultActions update(long id, Map<String, Object> body) throws Exception {
         return mockMvc.perform(put("/api/viagens/{id}", id)
                 .header("Authorization", token)

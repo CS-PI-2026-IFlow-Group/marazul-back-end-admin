@@ -20,6 +20,23 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     @EntityGraph(attributePaths = {"originCity", "destinationCity", "vehicle", "drivers"})
     Optional<Trip> findById(Long id);
 
+    @EntityGraph(attributePaths = {
+            "originCity", "originCity.state", "destinationCity", "destinationCity.state", "vehicle", "client"})
+    @Query("""
+            select t from Trip t
+            where (:status is null or t.status = :status)
+              and (:periodStart is null or t.plannedDepartureOrigin >= :periodStart)
+              and (:periodEnd is null or t.plannedDepartureOrigin < :periodEnd)
+              and (:cityId is null or t.originCity.id = :cityId or t.destinationCity.id = :cityId)
+              and (:vehicleId is null or t.vehicle.id = :vehicleId)
+            order by t.plannedDepartureOrigin asc
+            """)
+    List<Trip> findByFilters(@Param("status") br.com.marazulturismo.marazulbackendadmin.enums.TripStatus status,
+                             @Param("periodStart") LocalDateTime periodStart,
+                             @Param("periodEnd") LocalDateTime periodEnd,
+                             @Param("cityId") Long cityId,
+                             @Param("vehicleId") Long vehicleId);
+
     @Query("select (count(t) > 0) from Trip t where t.vehicle.id = :vehicleId " +
             "and (:excludeTripId is null or t.id != :excludeTripId) " +
             "and t.plannedDepartureOrigin < :periodEnd and t.plannedArrivalOrigin > :periodStart")

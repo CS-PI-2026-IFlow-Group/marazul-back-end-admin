@@ -3,6 +3,8 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripStatusRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.EnumOptionDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.service.TripService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -15,8 +17,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -30,8 +35,18 @@ public class TripController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TripResponseDTO>> list() {
-        return ResponseEntity.ok(tripService.list());
+    public ResponseEntity<List<TripResponseDTO>> list(
+            @RequestParam(required = false) TripStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
+            @RequestParam(required = false) Long cidadeId,
+            @RequestParam(required = false) Long veiculoId) {
+        return ResponseEntity.ok(tripService.list(status, dataInicio, dataFim, cidadeId, veiculoId));
+    }
+
+    @GetMapping("/enums")
+    public ResponseEntity<List<EnumOptionDTO>> listEnums() {
+        return ResponseEntity.ok(tripService.listStatuses());
     }
 
     @GetMapping("/{id}")
