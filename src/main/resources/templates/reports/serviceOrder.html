@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Ordem de Serviço</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        body { font-family: Helvetica, sans-serif; font-size: 10pt; color: #111; }
+        .cabecalho { border-bottom: 2px solid #111; padding-bottom: 6pt; margin-bottom: 14pt; }
+        .empresa { font-size: 15pt; font-weight: bold; }
+        .titulo { font-size: 12pt; margin-top: 2pt; }
+        h2 { font-size: 10pt; text-transform: uppercase; border-bottom: 1px solid #999; padding-bottom: 3pt; margin: 12pt 0 6pt; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 4pt 3pt; vertical-align: top; }
+        .rotulo { width: 26%; font-weight: bold; color: #444; }
+        .horarios td { width: 50%; }
+        .contato { border: 1px solid #777; padding: 8pt; margin-top: 6pt; }
+        .observacao { min-height: 28pt; line-height: 1.05; overflow-wrap: anywhere; }
+        .rodape { border-top: 1px solid #999; margin-top: 18pt; padding-top: 6pt; font-size: 8pt; color: #444; }
+    </style>
+</head>
+<body>
+<div class="cabecalho">
+    <div class="empresa" th:text="${company}">Marazul Turismo</div>
+    <div class="titulo">Ordem de Serviço</div>
+</div>
+
+<table>
+    <tr><td class="rotulo">Viagem</td><td th:text="${order.tripId}">1</td></tr>
+    <tr><td class="rotulo">Trecho</td><td th:text="${order.originCity + '/' + order.originState + ' para ' + order.destinationCity + '/' + order.destinationState}">Origem/UF para Destino/UF</td></tr>
+    <tr><td class="rotulo">Ônibus</td><td th:text="${order.vehiclePrefix + ' - ' + order.vehicleLicensePlate}">Prefixo - Placa</td></tr>
+    <tr><td class="rotulo">Motoristas</td><td th:text="${drivers}">Motoristas escalados</td></tr>
+    <tr><td class="rotulo">Cliente contratante</td><td th:text="${order.clientName == null ? '' : order.clientName}">Cliente</td></tr>
+</table>
+
+<h2>Horários previstos</h2>
+<table class="horarios">
+    <tr><td><strong>Saída da origem:</strong> <span th:text="${departureOrigin}">00/00/0000 00:00</span></td>
+        <td><strong>Chegada ao destino:</strong> <span th:text="${arrivalDestination}">00/00/0000 00:00</span></td></tr>
+    <tr><td><strong>Saída do destino:</strong> <span th:text="${departureDestination}">00/00/0000 00:00</span></td>
+        <td><strong>Chegada à origem:</strong> <span th:text="${arrivalOrigin}">00/00/0000 00:00</span></td></tr>
+</table>
+
+<h2>Contato do passageiro responsável</h2>
+<div class="contato">
+    <div><strong>Nome:</strong> <span th:text="${order.responsiblePassengerName == null ? '' : order.responsiblePassengerName}"></span></div>
+    <div><strong>Telefone:</strong> <span th:text="${responsiblePassengerPhone}"></span></div>
+</div>
+
+<h2>Observações</h2>
+<div class="observacao" th:style="'font-size: ' + ${notesFontSize} + 'pt'" th:text="${order.notes == null ? '' : order.notes}"></div>
+
+<div class="rodape">Documento para acompanhamento da viagem pelo motorista.</div>
+</body>
+</html>
