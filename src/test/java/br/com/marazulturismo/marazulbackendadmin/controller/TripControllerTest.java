@@ -803,6 +803,35 @@ public class TripControllerTest {
                 .andExpect(jsonPath("$[0].label").value("Agendada"));
     }
 
+    @Test
+    void listAndDetail_includeTheTripInformationRequiredForConsultation() throws Exception {
+        Passenger passenger = savePassenger("Passageiro da Consulta", "100.000.000-99");
+        Map<String, Object> body = validTrip();
+        body.put("passengers", List.of(Map.of(
+                "passengerId", passenger.getId(),
+                "amountDue", 150.00,
+                "amountPaid", 80.00)));
+        body.put("responsiblePassengerId", passenger.getId());
+        long tripId = scheduledId(body);
+
+        mockMvc.perform(get("/api/viagens").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(tripId))
+                .andExpect(jsonPath("$[0].originStateAcronym").exists())
+                .andExpect(jsonPath("$[0].destinationStateAcronym").exists())
+                .andExpect(jsonPath("$[0].vehiclePrefix").value("T001"))
+                .andExpect(jsonPath("$[0].vehicleLicensePlate").value("TRP0A01"))
+                .andExpect(jsonPath("$[0].passengerCount").value(1));
+
+        mockMvc.perform(get("/api/viagens/{id}", tripId).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vehiclePrefix").value("T001"))
+                .andExpect(jsonPath("$.drivers[0].name").value("Motorista Um"))
+                .andExpect(jsonPath("$.passengers[0].amountPaid").value(80.00))
+                .andExpect(jsonPath("$.responsiblePassengerName").value("Passageiro da Consulta"))
+                .andExpect(jsonPath("$.passengerCount").value(1));
+    }
+
     private ResultActions update(long id, Map<String, Object> body) throws Exception {
         return mockMvc.perform(put("/api/viagens/{id}", id)
                 .header("Authorization", token)

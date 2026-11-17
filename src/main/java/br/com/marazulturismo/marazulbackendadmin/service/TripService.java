@@ -3,6 +3,7 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripExpenseRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripStatusRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
@@ -63,8 +64,8 @@ public class TripService {
     }
 
     @Transactional(readOnly = true)
-    public List<TripResponseDTO> list(TripStatus status, LocalDate startDate, LocalDate endDate,
-                                      Long cityId, Long vehicleId) {
+    public List<TripListResponseDTO> list(TripStatus status, LocalDate startDate, LocalDate endDate,
+                                          Long cityId, Long vehicleId) {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
             throw new TripValidationException("A data final não pode ser anterior à data inicial.");
         }
@@ -73,7 +74,7 @@ public class TripService {
         LocalDateTime end = endDate == null ? null : endDate.plusDays(1).atStartOfDay();
 
         return tripRepository.findByFilters(status, start, end, cityId, vehicleId).stream()
-                .map(TripResponseDTO::fromEntity)
+                .map(TripListResponseDTO::fromEntity)
                 .toList();
     }
 

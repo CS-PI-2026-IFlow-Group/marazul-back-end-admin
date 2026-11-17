@@ -1,6 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripStatusRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.EnumOptionDTO;
@@ -35,7 +36,7 @@ public class TripController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TripResponseDTO>> list(
+    public ResponseEntity<List<TripListResponseDTO>> list(
             @RequestParam(required = false) TripStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
