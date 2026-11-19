@@ -112,6 +112,25 @@ class TripSecurityTest {
     }
 
     @Test
+    void get_tripDetail_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/viagens/{id}", 1))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void get_tripEnums_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/viagens/enums"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void get_tripEnums_withoutPermission_returns403() throws Exception {
+        mockMvc.perform(get("/api/viagens/enums")
+                        .header("Authorization", tokenSemPermissaoViagens))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void post_viagens_withoutToken_returns401() throws Exception {
         mockMvc.perform(post("/api/viagens")
                         .contentType(MediaType.APPLICATION_JSON)
