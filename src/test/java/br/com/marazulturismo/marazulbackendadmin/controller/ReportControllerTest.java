@@ -201,6 +201,17 @@ class ReportControllerTest {
     }
 
     @Test
+    void pdf_requestedByThePanel_exposesTheFileNameHeader() throws Exception {
+        mockMvc.perform(get("/api/relatorios/{relatorio}/pdf", SLUG)
+                        .param("dataInicio", "2026-01-01")
+                        .param("dataFim", "2026-01-31")
+                        .header("Authorization", token)
+                        .header("Origin", "http://localhost:5173"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Expose-Headers", containsString("Content-Disposition")));
+    }
+
+    @Test
     void table_withoutToken_returns401() throws Exception {
         mockMvc.perform(get("/api/relatorios/{relatorio}", SLUG))
                 .andExpect(status().isUnauthorized());
