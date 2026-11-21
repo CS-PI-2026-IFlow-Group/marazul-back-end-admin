@@ -7,9 +7,13 @@ import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
+import br.com.marazulturismo.marazulbackendadmin.model.Address;
 import br.com.marazulturismo.marazulbackendadmin.model.City;
+import br.com.marazulturismo.marazulbackendadmin.model.Client;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.repository.ExpenseRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.AddressRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
@@ -79,6 +83,12 @@ public class TripControllerTest {
 
     @Autowired
     private CityRepository cityRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private ClientRepository clientRepository;
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -770,6 +780,126 @@ public class TripControllerTest {
                 .andExpect(jsonPath("$.erro").exists());
     }
 
+    @Test
+    void list_filtersByStatusPeriodCityAndVehicle() throws Exception {
+        long tripId = scheduledId(validTrip());
+
+        mockMvc.perform(get("/api/viagens")
+                        .header("Authorization", token)
+                        .param("status", "SCHEDULED")
+                        .param("dataInicio", DEPARTURE_ORIGIN.toLocalDate().toString())
+                        .param("dataFim", DEPARTURE_ORIGIN.toLocalDate().toString())
+                        .param("cidadeId", origin.getId().toString())
+                        .param("veiculoId", vehicle.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(tripId))
+                .andExpect(jsonPath("$[0].status").value("SCHEDULED"));
+    }
+
+    @Test
+    void list_rejectsUnknownStatusWithAcceptedValues() throws Exception {
+        mockMvc.perform(get("/api/viagens")
+                        .header("Authorization", token)
+                        .param("status", "INEXISTENTE"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("SCHEDULED")));
+    }
+
+    @Test
+    void listEnums_returnsTripStatusesWithPortugueseLabels() throws Exception {
+        mockMvc.perform(get("/api/viagens/enums").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].value").value("SCHEDULED"))
+                .andExpect(jsonPath("$[0].label").value("Agendada"));
+    }
+
+    @Test
+    void listAndDetail_includeTheTripInformationRequiredForConsultation() throws Exception {
+        Passenger passenger = savePassenger("Passageiro da Consulta", "100.000.000-99");
+        Map<String, Object> body = validTrip();
+        body.put("passengers", List.of(Map.of(
+                "passengerId", passenger.getId(),
+                "amountDue", 150.00,
+                "amountPaid", 80.00)));
+        body.put("responsiblePassengerId", passenger.getId());
+        long tripId = scheduledId(body);
+
+        mockMvc.perform(get("/api/viagens").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(tripId))
+                .andExpect(jsonPath("$[0].originStateAcronym").exists())
+                .andExpect(jsonPath("$[0].destinationStateAcronym").exists())
+                .andExpect(jsonPath("$[0].vehiclePrefix").value("T001"))
+                .andExpect(jsonPath("$[0].vehicleLicensePlate").value("TRP0A01"))
+                .andExpect(jsonPath("$[0].passengerCount").value(1));
+
+        mockMvc.perform(get("/api/viagens/{id}", tripId).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vehiclePrefix").value("T001"))
+                .andExpect(jsonPath("$.drivers[0].name").value("Motorista Um"))
+                .andExpect(jsonPath("$.passengers[0].amountPaid").value(80.00))
+                .andExpect(jsonPath("$.responsiblePassengerName").value("Passageiro da Consulta"))
+                .andExpect(jsonPath("$.passengerCount").value(1));
+    }
+
+    @Test
+    void list_ordersTripsAndFiltersByDestinationCityAndInclusivePeriod() throws Exception {
+        long firstTripId = scheduledId(validTrip());
+        Vehicle laterVehicle = saveVehicle("T009", "TRP0A09", VehicleStatus.ACTIVE);
+        Collaborator laterDriver = saveDriver("Motorista Dois", Position.DRIVER, new CNH("12345678901", CNHType.D));
+        Map<String, Object> laterTrip = validTrip();
+        laterTrip.put("vehicleId", laterVehicle.getId());
+        laterTrip.put("driverIds", List.of(laterDriver.getId()));
+        shiftSchedule(laterTrip, 2);
+        long laterTripId = scheduledId(laterTrip);
+
+        mockMvc.perform(get("/api/viagens").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(firstTripId))
+                .andExpect(jsonPath("$[1].id").value(laterTripId));
+
+        mockMvc.perform(get("/api/viagens")
+                        .header("Authorization", token)
+                        .param("status", "SCHEDULED")
+                        .param("dataInicio", DEPARTURE_ORIGIN.plusDays(2).toLocalDate().toString())
+                        .param("dataFim", DEPARTURE_ORIGIN.plusDays(2).toLocalDate().toString())
+                        .param("cidadeId", destination.getId().toString())
+                        .param("veiculoId", laterVehicle.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(laterTripId));
+    }
+
+    @Test
+    void list_rejectsPeriodWithEndBeforeStart() throws Exception {
+        mockMvc.perform(get("/api/viagens")
+                        .header("Authorization", token)
+                        .param("dataInicio", DEPARTURE_ORIGIN.plusDays(1).toLocalDate().toString())
+                        .param("dataFim", DEPARTURE_ORIGIN.toLocalDate().toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("data final")));
+    }
+
+    @Test
+    void findById_returnsClientWhenTripIsLinkedToOne() throws Exception {
+        Client client = saveClient("Cliente da Consulta");
+        Map<String, Object> body = validTrip();
+        body.put("clientId", client.getId());
+        long tripId = scheduledId(body);
+
+        mockMvc.perform(get("/api/viagens/{id}", tripId).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.clientName").value("Cliente da Consulta"));
+    }
+
+    @Test
+    void findById_withUnknownTrip_returns404() throws Exception {
+        mockMvc.perform(get("/api/viagens/{id}", 999999L).header("Authorization", token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").exists());
+    }
+
     private ResultActions update(long id, Map<String, Object> body) throws Exception {
         return mockMvc.perform(put("/api/viagens/{id}", id)
                 .header("Authorization", token)
@@ -789,6 +919,18 @@ public class TripControllerTest {
 
     private Passenger savePassenger(String name, String cpf) {
         return passengerRepository.save(new Passenger(name, cpf, null));
+    }
+
+    private Client saveClient(String name) {
+        Address address = addressRepository.save(new Address("Rua do Cliente", "100", null, origin));
+        return clientRepository.save(new Client(name, "11144477735", null, address));
+    }
+
+    private void shiftSchedule(Map<String, Object> body, long days) {
+        body.put("plannedDepartureOrigin", DEPARTURE_ORIGIN.plusDays(days).toString());
+        body.put("plannedArrivalDestination", ARRIVAL_DESTINATION.plusDays(days).toString());
+        body.put("plannedDepartureDestination", DEPARTURE_DESTINATION.plusDays(days).toString());
+        body.put("plannedArrivalOrigin", ARRIVAL_ORIGIN.plusDays(days).toString());
     }
 
     private Map<String, Object> validTrip() {

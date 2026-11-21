@@ -3,6 +3,7 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripExpenseRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripStatusRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -62,8 +64,26 @@ public class TripService {
     }
 
     @Transactional(readOnly = true)
-    public List<TripResponseDTO> list() {
-        return tripRepository.findAll().stream().map(TripResponseDTO::fromEntity).toList();
+    public List<TripListResponseDTO> list(TripStatus status, LocalDate startDate, LocalDate endDate,
+                                          Long cityId, Long vehicleId) {
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw new TripValidationException("A data final não pode ser anterior à data inicial.");
+        }
+
+        LocalDateTime start = startDate == null ? null : startDate.atStartOfDay();
+        LocalDateTime end = endDate == null ? null : endDate.plusDays(1).atStartOfDay();
+
+        return tripRepository.findByFilters(status, start, end, cityId, vehicleId).stream()
+                .map(TripListResponseDTO::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<br.com.marazulturismo.marazulbackendadmin.dto.EnumOptionDTO> listStatuses() {
+        return java.util.Arrays.stream(TripStatus.values())
+                .map(status -> new br.com.marazulturismo.marazulbackendadmin.dto.EnumOptionDTO(
+                        status.name(), status.getLabel()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
