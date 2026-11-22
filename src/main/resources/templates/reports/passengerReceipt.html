@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Recibo do passageiro</title>
+    <style>
+        @page { size: A4; margin: 15mm; }
+        body { font-family: Helvetica, sans-serif; font-size: 10pt; color: #111; }
+        .receipt { page-break-before: always; }
+        .receipt:first-child { page-break-before: auto; }
+        .cabecalho { border-bottom: 2px solid #111; padding-bottom: 6pt; margin-bottom: 14pt; }
+        .empresa { font-size: 15pt; font-weight: bold; }
+        .titulo { font-size: 12pt; margin-top: 2pt; }
+        .identification { margin-top: 6pt; font-size: 9pt; }
+        p { line-height: 1.5; margin: 10pt 0; }
+        .amount { text-align: right; font-size: 14pt; font-weight: bold; }
+        .signature { margin-top: 28pt; border-top: 1px solid #555; width: 65%; padding-top: 5pt; text-align: center; }
+        .footer { margin-top: 16pt; font-size: 8pt; color: #444; }
+    </style>
+</head>
+<body>
+<div class="receipt" th:each="receipt : ${receipts}">
+    <div class="cabecalho">
+        <div class="empresa" th:text="${receipt.data.companyName}">Empresa</div>
+        <div class="titulo">Recibo de pagamento do passageiro</div>
+        <div class="identification">Número: <span th:text="${receipt.data.receiptNumber}"></span></div>
+    </div>
+    <div class="amount" th:text="${receipt.amount}"></div>
+    <p>Recebemos de <strong th:text="${receipt.data.passengerName}"></strong>,
+        CPF <span th:text="${receipt.cpf}"></span>, a importância de
+        <strong th:text="${receipt.amount}"></strong>, referente ao pagamento da viagem abaixo.</p>
+    <p><strong>Trecho:</strong>
+        <span th:text="${receipt.data.originCity + '/' + receipt.data.originStateAcronym + ' para ' + receipt.data.destinationCity + '/' + receipt.data.destinationStateAcronym}"></span><br />
+        <strong>Saída:</strong> <span th:text="${receipt.departure}"></span><br />
+        <strong>Emissão:</strong> <span th:text="${receipt.issuedAt}"></span></p>
+    <div class="signature" th:text="${receipt.data.companyName}"></div>
+    <div class="footer">Valor pago registrado no momento da emissão. Guarde este comprovante.</div>
+</div>
+</body>
+</html>
