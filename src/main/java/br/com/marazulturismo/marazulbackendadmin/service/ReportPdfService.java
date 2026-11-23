@@ -13,6 +13,7 @@ import org.thymeleaf.context.Context;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -131,15 +132,21 @@ public class ReportPdfService {
             return "-";
         }
         if (value instanceof Collection<?> collection) {
+            if (collection.isEmpty()) {
+                return "-";
+            }
             return collection.stream()
-                    .map(item -> format(item, ReportValueFormat.TEXTO))
+                    .map(item -> format(item, format))
                     .collect(Collectors.joining(", "));
         }
         if (value.getClass().isArray()) {
             int length = java.lang.reflect.Array.getLength(value);
+            if (length == 0) {
+                return "-";
+            }
             List<String> items = new ArrayList<>(length);
             for (int index = 0; index < length; index++) {
-                items.add(format(java.lang.reflect.Array.get(value, index), ReportValueFormat.TEXTO));
+                items.add(format(java.lang.reflect.Array.get(value, index), format));
             }
             return String.join(", ", items);
         }
@@ -162,7 +169,12 @@ public class ReportPdfService {
         NumberFormat numberFormat = NumberFormat.getNumberInstance(BRAZIL);
         numberFormat.setMinimumFractionDigits(2);
         numberFormat.setMaximumFractionDigits(2);
-        return "R$ " + numberFormat.format(value);
+        numberFormat.setRoundingMode(RoundingMode.HALF_UP);
+        String formattedAmount = numberFormat.format(value);
+        if (formattedAmount.startsWith("-")) {
+            return "-R$ " + formattedAmount.substring(1);
+        }
+        return "R$ " + formattedAmount;
     }
 
     private static String formatPercentage(Object value) {
