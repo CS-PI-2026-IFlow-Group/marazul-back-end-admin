@@ -28,7 +28,8 @@ public class ReportService {
 
     public List<ReportSummaryDTO> available() {
         return definitions.values().stream()
-                .map(it -> new ReportSummaryDTO(it.slug(), it.title(), it.requiresPeriod()))
+                .map(it -> new ReportSummaryDTO(
+                        it.slug(), it.title(), it.requiresPeriod(), it.defaultPeriod()))
                 .toList();
     }
 
