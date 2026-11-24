@@ -37,6 +37,33 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
                              @Param("cityId") Long cityId,
                              @Param("vehicleId") Long vehicleId);
 
+    @EntityGraph(attributePaths = {
+            "originCity", "originCity.state", "destinationCity", "destinationCity.state", "vehicle", "drivers"})
+    @Query("""
+            select t from Trip t
+            where t.plannedDepartureOrigin >= :periodStart
+              and t.plannedDepartureOrigin < :periodEnd
+            order by t.plannedDepartureOrigin asc, t.id asc
+            """)
+    List<Trip> findScheduleBetween(@Param("periodStart") LocalDateTime periodStart,
+                                   @Param("periodEnd") LocalDateTime periodEnd);
+
+    @Query("""
+            select count(t) from Trip t
+            where t.plannedDepartureOrigin >= :periodStart
+              and t.plannedDepartureOrigin < :periodEnd
+            """)
+    long countDepartingBetween(@Param("periodStart") LocalDateTime periodStart,
+                               @Param("periodEnd") LocalDateTime periodEnd);
+
+    @Query("""
+            select count(distinct t.vehicle.id) from Trip t
+            where t.plannedDepartureOrigin >= :periodStart
+              and t.plannedDepartureOrigin < :periodEnd
+            """)
+    long countVehiclesDepartingBetween(@Param("periodStart") LocalDateTime periodStart,
+                                       @Param("periodEnd") LocalDateTime periodEnd);
+
     @Query("select (count(t) > 0) from Trip t where t.vehicle.id = :vehicleId " +
             "and (:excludeTripId is null or t.id != :excludeTripId) " +
             "and t.plannedDepartureOrigin < :periodEnd and t.plannedArrivalOrigin > :periodStart")
