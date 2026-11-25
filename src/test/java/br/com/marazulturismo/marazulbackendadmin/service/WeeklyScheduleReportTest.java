@@ -9,6 +9,8 @@ import br.com.marazulturismo.marazulbackendadmin.dto.ReportTotalDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.BodyworkModel;
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportDefaultPeriod;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportValueFormat;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.exception.ReportPeriodValidationException;
@@ -22,12 +24,15 @@ import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorReposito
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.TripRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -51,6 +56,9 @@ class WeeklyScheduleReportTest {
 
     @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private ReportPdfService reportPdfService;
 
     @Autowired
     private TripRepository tripRepository;
@@ -86,20 +94,27 @@ class WeeklyScheduleReportTest {
     }
 
     @Test
-    void isListedAmongTheAvailableReportsWithAPeriod() {
+    void isListedAmongTheAvailableReportsWithTheWeekAsDefaultPeriod() {
         assertThat(reportService.available())
                 .filteredOn(summary -> summary.relatorio().equals("agenda"))
-                .extracting(ReportSummaryDTO::titulo, ReportSummaryDTO::exigePeriodo)
-                .containsExactly(tuple("Agenda da semana", true));
+                .extracting(ReportSummaryDTO::titulo, ReportSummaryDTO::exigePeriodo, ReportSummaryDTO::periodoPadrao)
+                .containsExactly(tuple("Agenda da semana", true, ReportDefaultPeriod.SEMANA));
     }
 
     @Test
-    void generate_returnsTheScheduleColumnsInOrder() {
+    void generate_returnsTheScheduleColumnsInOrderWithTheDayAsDate() {
         ReportTableResponseDTO table = reportService.generate("agenda", MONDAY, MONDAY.plusDays(6));
 
         assertThat(table.colunas())
-                .extracting(ReportColumnDTO::chave)
-                .containsExactly("dia", "diaSemana", "saida", "trecho", "onibus", "motoristas", "situacao");
+                .extracting(ReportColumnDTO::chave, ReportColumnDTO::formato)
+                .containsExactly(
+                        tuple("dia", ReportValueFormat.DATA),
+                        tuple("diaSemana", ReportValueFormat.TEXTO),
+                        tuple("saida", ReportValueFormat.TEXTO),
+                        tuple("trecho", ReportValueFormat.TEXTO),
+                        tuple("onibus", ReportValueFormat.TEXTO),
+                        tuple("motoristas", ReportValueFormat.TEXTO),
+                        tuple("situacao", ReportValueFormat.TEXTO));
     }
 
     @Test
@@ -174,6 +189,12 @@ class WeeklyScheduleReportTest {
 
         assertThat(total(content, "viagens")).isEqualTo(3L);
         assertThat(total(content, "onibusEnvolvidos")).isEqualTo(2L);
+        assertThat(content.totals())
+                .extracting(ReportTotalDTO::chave, ReportTotalDTO::formato)
+                .containsExactly(
+                        tuple("viagens", ReportValueFormat.NUMERO),
+                        tuple("onibusEnvolvidos", ReportValueFormat.NUMERO),
+                        tuple("onibusSemViagem", ReportValueFormat.TEXTO));
     }
 
     @Test
@@ -191,6 +212,20 @@ class WeeklyScheduleReportTest {
                 .doesNotContain("AG01", "AG03", "AG04", "AG05");
     }
 
+    @Test
+    void pdf_showsTheSameScheduleWithTheDayFormatted() throws IOException {
+        saveTrip(busOne, MONDAY.atTime(6, 30), Set.of(zeca));
+
+        byte[] pdf = reportPdfService.render(reportService.generate("agenda", MONDAY, MONDAY.plusDays(1)));
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            assertThat(new PDFTextStripper().getText(document))
+                    .contains("Agenda da semana", "03/03/2031", "04/03/2031", "06:30",
+                            origin.getName() + "/" + origin.getState().getAcronym() + " – ",
+                            "AG01", "Agendada", "Sem viagem", "Ônibus sem viagem: AG02");
+        }
+    }
+
     private ReportContentDTO content(LocalDate start, LocalDate end) {
         return report.content(ReportPeriodDTO.of(start, end));
     }
@@ -205,7 +240,7 @@ class WeeklyScheduleReportTest {
 
     private String route() {
         return origin.getName() + "/" + origin.getState().getAcronym()
-                + " → " + destination.getName() + "/" + destination.getState().getAcronym();
+                + " – " + destination.getName() + "/" + destination.getState().getAcronym();
     }
 
     private Trip saveTrip(Vehicle vehicle, LocalDateTime departure, Set<Collaborator> drivers) {

@@ -4,6 +4,8 @@ import br.com.marazulturismo.marazulbackendadmin.dto.ReportColumnDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportContentDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportPeriodDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportTotalDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportDefaultPeriod;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportValueFormat;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.model.City;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
@@ -51,9 +53,14 @@ public class WeeklyScheduleReport implements ReportDefinition {
     }
 
     @Override
+    public ReportDefaultPeriod defaultPeriod() {
+        return ReportDefaultPeriod.SEMANA;
+    }
+
+    @Override
     public List<ReportColumnDTO> columns() {
         return List.of(
-                ReportColumnDTO.centered("dia", "Dia"),
+                ReportColumnDTO.date("dia", "Dia"),
                 ReportColumnDTO.text("diaSemana", "Dia da semana"),
                 ReportColumnDTO.centered("saida", "Saída"),
                 ReportColumnDTO.text("trecho", "Trecho"),
@@ -84,11 +91,11 @@ public class WeeklyScheduleReport implements ReportDefinition {
         }
 
         List<ReportTotalDTO> totals = List.of(
-                new ReportTotalDTO("viagens", "Viagens",
+                new ReportTotalDTO("viagens", "Viagens", ReportValueFormat.NUMERO,
                         tripRepository.countDepartingBetween(start, end)),
-                new ReportTotalDTO("onibusEnvolvidos", "Ônibus envolvidos",
+                new ReportTotalDTO("onibusEnvolvidos", "Ônibus envolvidos", ReportValueFormat.NUMERO,
                         tripRepository.countVehiclesDepartingBetween(start, end)),
-                new ReportTotalDTO("onibusSemViagem", "Ônibus sem viagem",
+                new ReportTotalDTO("onibusSemViagem", "Ônibus sem viagem", ReportValueFormat.TEXTO,
                         vehicleRepository.findPrefixesWithoutTripBetween(VehicleStatus.ACTIVE, start, end)));
 
         return ReportContentDTO.of(rows, totals);
@@ -114,7 +121,7 @@ public class WeeklyScheduleReport implements ReportDefinition {
         row.put("dia", departure.toLocalDate());
         row.put("diaSemana", weekday(departure.toLocalDate()));
         row.put("saida", TIME.format(departure));
-        row.put("trecho", place(trip.getOriginCity()) + " → " + place(trip.getDestinationCity()));
+        row.put("trecho", place(trip.getOriginCity()) + " – " + place(trip.getDestinationCity()));
         row.put("onibus", trip.getVehicle().getPrefix());
         row.put("motoristas", drivers(trip, collator));
         row.put("situacao", trip.getStatus().getLabel());
