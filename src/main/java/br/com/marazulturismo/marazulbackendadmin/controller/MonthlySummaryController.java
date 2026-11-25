@@ -30,7 +30,7 @@ public class MonthlySummaryController {
         return ResponseEntity.ok(monthlySummaryService.generate(mes));
     }
 
-    @GetMapping(value = "/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    @GetMapping("/pdf")
     public ResponseEntity<byte[]> pdf(@RequestParam(required = false) String mes) {
         MonthlySummaryResponseDTO summary = monthlySummaryService.generate(mes);
         return ResponseEntity.ok()

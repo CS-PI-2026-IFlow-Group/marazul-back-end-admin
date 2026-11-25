@@ -11,6 +11,7 @@ import br.com.marazulturismo.marazulbackendadmin.model.Client;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Expense;
 import br.com.marazulturismo.marazulbackendadmin.model.Passenger;
+import br.com.marazulturismo.marazulbackendadmin.model.Profile;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.model.TripPassenger;
 import br.com.marazulturismo.marazulbackendadmin.model.Vehicle;
@@ -87,6 +88,7 @@ class MonthlySummaryControllerTest {
     private City destination;
     private Vehicle vehicle;
     private String token;
+    private String tokenWithoutReportPermission;
     private long passengerSequence = 1;
     private long clientSequence = 1;
     private long vehicleSequence = 1;
@@ -103,6 +105,12 @@ class MonthlySummaryControllerTest {
                 profileRepository.findByName("Administrador").orElseThrow(),
                 "admin.resumo.mensal@marazul.test", null, null, "hash-irrelevante"));
         token = "Bearer " + jwtService.generateToken(admin);
+
+        Profile limitedProfile = profileRepository.save(new Profile("Perfil Sem Relatorios Mensais"));
+        Collaborator limitedUser = collaboratorRepository.save(new Collaborator(
+                "Usuário Sem Relatórios", new Date(), Position.OTHER, true,
+                limitedProfile, "sem.relatorios.mensais@marazul.test", null, null, "hash-irrelevante"));
+        tokenWithoutReportPermission = "Bearer " + jwtService.generateToken(limitedUser);
     }
 
     @Test
@@ -189,6 +197,74 @@ class MonthlySummaryControllerTest {
                         .header("Authorization", token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.erro", containsString("yyyy-MM")));
+    }
+
+    @Test
+    void pdf_withoutMonth_returnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/relatorios/resumo-mensal/pdf")
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro", containsString("yyyy-MM")));
+    }
+
+    @Test
+    void pdf_withInvalidMonth_returnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/relatorios/resumo-mensal/pdf")
+                        .param("mes", "2026-13")
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro", containsString("yyyy-MM")));
+    }
+
+    @Test
+    void summary_withoutAuthentication_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/relatorios/resumo-mensal").param("mes", "2026-10"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void pdf_withoutAuthentication_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/relatorios/resumo-mensal/pdf").param("mes", "2026-10"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void summary_withoutReportPermission_returnsForbidden() throws Exception {
+        mockMvc.perform(get("/api/relatorios/resumo-mensal")
+                        .param("mes", "2026-10")
+                        .header("Authorization", tokenWithoutReportPermission))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void pdf_withoutReportPermission_returnsForbidden() throws Exception {
+        mockMvc.perform(get("/api/relatorios/resumo-mensal/pdf")
+                        .param("mes", "2026-10")
+                        .header("Authorization", tokenWithoutReportPermission))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void summary_atYearBoundary_comparesJanuaryWithPreviousDecember() throws Exception {
+        Client client = createClient("Cliente Virada");
+        createTrip(YearMonth.of(2025, 12), TripStatus.COMPLETED, client,
+                List.of(new BigDecimal("100.00")), List.of(new BigDecimal("30.00")));
+        createTrip(YearMonth.of(2026, 1), TripStatus.COMPLETED, client,
+                List.of(new BigDecimal("200.00")), List.of(new BigDecimal("40.00")));
+
+        mockMvc.perform(get("/api/relatorios/resumo-mensal")
+                        .param("mes", "2026-01")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.periodo.dataInicio").value("2026-01-01"))
+                .andExpect(jsonPath("$.periodo.dataFim").value("2026-01-31"))
+                .andExpect(jsonPath("$.indicadores[0].valor").value(1))
+                .andExpect(jsonPath("$.indicadores[0].valorAnterior").value(1))
+                .andExpect(jsonPath("$.indicadores[2].valor").value(200.0))
+                .andExpect(jsonPath("$.indicadores[2].valorAnterior").value(100.0))
+                .andExpect(jsonPath("$.indicadores[2].variacaoPercentual").value(100.0))
+                .andExpect(jsonPath("$.indicadores[4].valor").value(160.0))
+                .andExpect(jsonPath("$.indicadores[4].valorAnterior").value(70.0));
     }
 
     @Test
