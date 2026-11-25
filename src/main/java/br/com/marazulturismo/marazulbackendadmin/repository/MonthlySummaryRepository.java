@@ -15,21 +15,17 @@ public interface MonthlySummaryRepository extends JpaRepository<Trip, Long> {
             SELECT YEAR(t.planned_departure_origin) AS ano,
                    MONTH(t.planned_departure_origin) AS mes,
                    COUNT(DISTINCT t.id) AS viagens,
-                   COALESCE(SUM(passenger_counts.quantidade), 0) AS passageiros,
+                   COALESCE(MAX(recebido.passageiros), 0) AS passageiros,
                    COALESCE(MAX(recebido.total), 0) AS recebido,
                    COALESCE(MAX(gastos.total), 0) AS gastos
             FROM trips t
             LEFT JOIN (
-                SELECT trip_id, COUNT(*) AS quantidade
-                FROM trip_passengers
-                GROUP BY trip_id
-            ) passenger_counts ON passenger_counts.trip_id = t.id
-            LEFT JOIN (
                 SELECT YEAR(received_trip.planned_departure_origin) AS ano,
                        MONTH(received_trip.planned_departure_origin) AS mes,
-                       SUM(trip_passenger.amount_paid) AS total
+                       COUNT(trip_passenger.id) AS passageiros,
+                       COALESCE(SUM(trip_passenger.amount_paid), 0) AS total
                 FROM trips received_trip
-                JOIN trip_passengers trip_passenger ON trip_passenger.trip_id = received_trip.id
+                LEFT JOIN trip_passengers trip_passenger ON trip_passenger.trip_id = received_trip.id
                 WHERE received_trip.status = 'COMPLETED'
                   AND received_trip.planned_departure_origin >= :periodStart
                   AND received_trip.planned_departure_origin < :periodEnd
