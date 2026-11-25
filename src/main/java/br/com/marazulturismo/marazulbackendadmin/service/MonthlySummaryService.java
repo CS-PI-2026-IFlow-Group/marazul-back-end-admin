@@ -9,6 +9,7 @@ import br.com.marazulturismo.marazulbackendadmin.exception.ReportPeriodValidatio
 import br.com.marazulturismo.marazulbackendadmin.repository.MonthlySummaryRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.MonthlySummaryRepository.MonthlyAggregate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -34,6 +35,7 @@ public class MonthlySummaryService {
         this.monthlySummaryRepository = monthlySummaryRepository;
     }
 
+    @Transactional(readOnly = true)
     public MonthlySummaryResponseDTO generate(String monthParameter) {
         YearMonth month = parseMonth(monthParameter);
         YearMonth previousMonth = month.minusMonths(1);
