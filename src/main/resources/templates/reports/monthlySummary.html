@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="'Resumo Mensal - ' + ${month}">Resumo Mensal</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 9pt;
+            color: #111111;
+        }
+
+        .cabecalho {
+            border-bottom: 2px solid #111111;
+            padding-bottom: 6pt;
+            margin-bottom: 12pt;
+        }
+
+        .empresa {
+            font-size: 15pt;
+            font-weight: bold;
+        }
+
+        .titulo {
+            font-size: 12pt;
+            margin-top: 2pt;
+        }
+
+        .meta {
+            font-size: 8pt;
+            color: #444444;
+            margin-top: 2pt;
+        }
+
+        h2 {
+            font-size: 10pt;
+            margin: 14pt 0 6pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #eeeeee;
+            border-bottom: 1px solid #999999;
+            padding: 5pt;
+            text-align: left;
+        }
+
+        td {
+            border-bottom: 1px solid #dddddd;
+            padding: 5pt;
+        }
+
+        .numero {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .posicao {
+            width: 1cm;
+            text-align: center;
+        }
+
+        .vazio {
+            padding: 12pt;
+            text-align: center;
+            color: #666666;
+        }
+    </style>
+</head>
+<body>
+<header class="cabecalho">
+    <div class="empresa" th:text="${company}">Marazul Turismo</div>
+    <div class="titulo">Resumo mensal</div>
+    <div class="meta" th:text="'Período: ' + ${period}">Período</div>
+    <div class="meta" th:text="'Emitido em: ' + ${issuedAt}">Emitido em</div>
+</header>
+
+<h2>Indicadores</h2>
+<table>
+    <thead>
+    <tr>
+        <th>Indicador</th>
+        <th class="numero">Mês</th>
+        <th class="numero">Mês anterior</th>
+        <th class="numero">Variação</th>
+        <th class="numero">Variação percentual</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="indicator : ${indicators}">
+        <td th:text="${indicator.title}">Indicador</td>
+        <td class="numero" th:text="${indicator.value}">0</td>
+        <td class="numero" th:text="${indicator.previousValue}">0</td>
+        <td class="numero" th:text="${indicator.variation}">0</td>
+        <td class="numero" th:text="${indicator.variationPercentage}">-</td>
+    </tr>
+    </tbody>
+</table>
+
+<h2>Principais clientes</h2>
+<table>
+    <thead>
+    <tr>
+        <th class="posicao">#</th>
+        <th>Cliente</th>
+        <th class="numero">Viagens concluídas</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="client : ${topClients}">
+        <td class="posicao" th:text="${client.posicao}">1</td>
+        <td th:text="${client.cliente}">Cliente</td>
+        <td class="numero" th:text="${client.viagens}">0</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(topClients)}">
+        <td class="vazio" colspan="3">Nenhum cliente com viagens concluídas no mês.</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
