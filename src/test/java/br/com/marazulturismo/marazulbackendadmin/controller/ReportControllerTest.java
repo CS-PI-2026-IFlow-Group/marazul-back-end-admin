@@ -5,6 +5,8 @@ import br.com.marazulturismo.marazulbackendadmin.dto.ReportContentDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportPeriodDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportTotalDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportDefaultPeriod;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportValueFormat;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Permission;
 import br.com.marazulturismo.marazulbackendadmin.model.Profile;
@@ -32,6 +34,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -66,14 +69,32 @@ class ReportControllerTest {
                 public List<ReportColumnDTO> columns() {
                     return List.of(
                             ReportColumnDTO.text("destino", "Destino"),
-                            ReportColumnDTO.number("valor", "Valor"));
+                            ReportColumnDTO.number("quantidade", "Quantidade"),
+                            ReportColumnDTO.money("valor", "Valor"),
+                            ReportColumnDTO.percent("percentual", "Percentual"),
+                            ReportColumnDTO.date("data", "Data"),
+                            ReportColumnDTO.centered("status", "Situação"));
+                }
+
+                @Override
+                public ReportDefaultPeriod defaultPeriod() {
+                    return ReportDefaultPeriod.SEMANA;
                 }
 
                 @Override
                 public ReportContentDTO content(ReportPeriodDTO period) {
                     return ReportContentDTO.of(
-                            List.of(Map.of("destino", "Camboriú", "valor", new BigDecimal("1250.50"))),
-                            List.of(new ReportTotalDTO("valor", "Total", new BigDecimal("1250.50"))));
+                            List.of(Map.of(
+                                    "destino", "Camboriú",
+                                    "quantidade", 3,
+                                    "valor", new BigDecimal("1250.50"),
+                                    "percentual", new BigDecimal("75.0"),
+                                    "data", LocalDate.of(2026, 1, 15))),
+                            List.of(
+                                    new ReportTotalDTO(
+                                            "valor", "Total recebido", ReportValueFormat.MOEDA,
+                                            new BigDecimal("1250.50")),
+                                    new ReportTotalDTO("observacao", "Observação", "Total em texto")));
                 }
             };
         }
@@ -96,6 +117,33 @@ class ReportControllerTest {
 
     private String token;
     private String tokenWithoutPermission;
+
+    @Test
+    void reportDefinition_defaultsToMonthPeriod() {
+        ReportDefinition definition = new ReportDefinition() {
+            @Override
+            public String slug() {
+                return "relatorio-padrao";
+            }
+
+            @Override
+            public String title() {
+                return "Relatório Padrão";
+            }
+
+            @Override
+            public List<ReportColumnDTO> columns() {
+                return List.of();
+            }
+
+            @Override
+            public ReportContentDTO content(ReportPeriodDTO period) {
+                return ReportContentDTO.empty();
+            }
+        };
+
+        assertEquals(ReportDefaultPeriod.MES, definition.defaultPeriod());
+    }
 
     @BeforeEach
     void setUp() {
@@ -137,7 +185,8 @@ class ReportControllerTest {
         mockMvc.perform(get("/api/relatorios").header("Authorization", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.relatorio == '%s')].titulo", SLUG).value("Relatório de Teste"))
-                .andExpect(jsonPath("$[?(@.relatorio == '%s')].exigePeriodo", SLUG).value(true));
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].exigePeriodo", SLUG).value(true))
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].periodoPadrao", SLUG).value("SEMANA"));
     }
 
     @Test
@@ -151,12 +200,24 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.titulo").value("Relatório de Teste"))
                 .andExpect(jsonPath("$.periodo.dataInicio").value("2026-01-01"))
                 .andExpect(jsonPath("$.periodo.dataFim").value("2026-01-31"))
-                .andExpect(jsonPath("$.colunas", hasSize(2)))
+                .andExpect(jsonPath("$.colunas", hasSize(6)))
                 .andExpect(jsonPath("$.colunas[0].chave").value("destino"))
+                .andExpect(jsonPath("$.colunas[0].formato").value("TEXTO"))
                 .andExpect(jsonPath("$.colunas[1].alinhamento").value("RIGHT"))
+                .andExpect(jsonPath("$.colunas[1].formato").value("NUMERO"))
+                .andExpect(jsonPath("$.colunas[2].alinhamento").value("RIGHT"))
+                .andExpect(jsonPath("$.colunas[2].formato").value("MOEDA"))
+                .andExpect(jsonPath("$.colunas[3].alinhamento").value("RIGHT"))
+                .andExpect(jsonPath("$.colunas[3].formato").value("PERCENTUAL"))
+                .andExpect(jsonPath("$.colunas[4].alinhamento").value("CENTER"))
+                .andExpect(jsonPath("$.colunas[4].formato").value("DATA"))
+                .andExpect(jsonPath("$.colunas[5].alinhamento").value("CENTER"))
+                .andExpect(jsonPath("$.colunas[5].formato").value("TEXTO"))
                 .andExpect(jsonPath("$.linhas", hasSize(1)))
                 .andExpect(jsonPath("$.linhas[0].destino").value("Camboriú"))
-                .andExpect(jsonPath("$.totais[0].titulo").value("Total"))
+                .andExpect(jsonPath("$.totais[0].titulo").value("Total recebido"))
+                .andExpect(jsonPath("$.totais[0].formato").value("MOEDA"))
+                .andExpect(jsonPath("$.totais[1].formato").value("TEXTO"))
                 .andExpect(jsonPath("$.emitidoEm").exists());
     }
 

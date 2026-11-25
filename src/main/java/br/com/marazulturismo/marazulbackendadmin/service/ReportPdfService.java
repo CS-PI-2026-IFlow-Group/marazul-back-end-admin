@@ -3,6 +3,7 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportColumnDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportTableResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportTotalDTO;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportValueFormat;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,15 +13,20 @@ import org.thymeleaf.context.Context;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ReportPdfService {
@@ -103,7 +109,7 @@ public class ReportPdfService {
         for (Map<String, Object> row : nullSafe(report.linhas())) {
             List<String> cells = new ArrayList<>();
             for (ReportColumnDTO column : nullSafe(report.colunas())) {
-                cells.add(format(row.get(column.chave())));
+                cells.add(format(row.get(column.chave()), column.formato()));
             }
             rendered.add(cells);
         }
@@ -115,25 +121,100 @@ public class ReportPdfService {
         for (ReportTotalDTO total : nullSafe(totals)) {
             Map<String, String> cell = new LinkedHashMap<>();
             cell.put("titulo", total.titulo());
-            cell.put("valor", format(total.valor()));
+            cell.put("valor", format(total.valor(), total.formato()));
             rendered.add(cell);
         }
         return rendered;
     }
 
-    private static String format(Object value) {
+    static String format(Object value, ReportValueFormat format) {
         if (value == null) {
             return "-";
         }
+        if (value instanceof Collection<?> collection) {
+            if (collection.isEmpty()) {
+                return "-";
+            }
+            return collection.stream()
+                    .map(item -> format(item, format))
+                    .collect(Collectors.joining(", "));
+        }
+        if (value.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(value);
+            if (length == 0) {
+                return "-";
+            }
+            List<String> items = new ArrayList<>(length);
+            for (int index = 0; index < length; index++) {
+                items.add(format(java.lang.reflect.Array.get(value, index), format));
+            }
+            return String.join(", ", items);
+        }
+
+        ReportValueFormat valueFormat = format == null ? ReportValueFormat.TEXTO : format;
+        return switch (valueFormat) {
+            case MOEDA -> formatMoney(value);
+            case PERCENTUAL -> formatPercentage(value);
+            case NUMERO -> formatNumber(value);
+            case DATA -> formatDate(value);
+            case DATA_HORA -> formatDateTime(value);
+            case TEXTO -> formatText(value);
+        };
+    }
+
+    private static String formatMoney(Object value) {
+        if (!(value instanceof Number)) {
+            return formatText(value);
+        }
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(BRAZIL);
+        numberFormat.setMinimumFractionDigits(2);
+        numberFormat.setMaximumFractionDigits(2);
+        numberFormat.setRoundingMode(RoundingMode.HALF_UP);
+        String formattedAmount = numberFormat.format(value);
+        if (formattedAmount.startsWith("-")) {
+            return "-R$ " + formattedAmount.substring(1);
+        }
+        return "R$ " + formattedAmount;
+    }
+
+    private static String formatPercentage(Object value) {
+        if (!(value instanceof Number)) {
+            return formatText(value);
+        }
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(BRAZIL);
+        numberFormat.setGroupingUsed(false);
+        numberFormat.setMinimumFractionDigits(1);
+        numberFormat.setMaximumFractionDigits(1);
+        return numberFormat.format(value) + "%";
+    }
+
+    private static String formatNumber(Object value) {
+        if (!(value instanceof Number)) {
+            return formatText(value);
+        }
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(BRAZIL);
+        DecimalFormat numberFormat = new DecimalFormat("#,##0.##########", symbols);
+        return numberFormat.format(value);
+    }
+
+    private static String formatDate(Object value) {
         if (value instanceof LocalDate date) {
             return DATE.format(date);
         }
         if (value instanceof LocalDateTime dateTime) {
+            return DATE.format(dateTime);
+        }
+        return formatText(value);
+    }
+
+    private static String formatDateTime(Object value) {
+        if (value instanceof LocalDateTime dateTime) {
             return DATE_TIME.format(dateTime);
         }
-        if (value instanceof BigDecimal decimal) {
-            return String.format(BRAZIL, "%,.2f", decimal);
-        }
+        return formatText(value);
+    }
+
+    private static String formatText(Object value) {
         if (value instanceof Boolean flag) {
             return flag ? "Sim" : "Não";
         }

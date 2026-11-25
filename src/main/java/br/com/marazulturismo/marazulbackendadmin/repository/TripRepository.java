@@ -1,5 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.repository;
 
+import br.com.marazulturismo.marazulbackendadmin.dto.TripVehiclePeriodDTO;
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -63,6 +64,16 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             """)
     long countVehiclesDepartingBetween(@Param("periodStart") LocalDateTime periodStart,
                                        @Param("periodEnd") LocalDateTime periodEnd);
+
+    @Query("""
+            select new br.com.marazulturismo.marazulbackendadmin.dto.TripVehiclePeriodDTO(
+                t.vehicle.id, t.plannedDepartureOrigin, t.plannedArrivalOrigin)
+            from Trip t
+            where t.plannedDepartureOrigin < :periodEnd
+              and t.plannedArrivalOrigin >= :periodStart
+            """)
+    List<TripVehiclePeriodDTO> findVehiclePeriodsOverlapping(@Param("periodStart") LocalDateTime periodStart,
+                                                             @Param("periodEnd") LocalDateTime periodEnd);
 
     @Query("select (count(t) > 0) from Trip t where t.vehicle.id = :vehicleId " +
             "and (:excludeTripId is null or t.id != :excludeTripId) " +
