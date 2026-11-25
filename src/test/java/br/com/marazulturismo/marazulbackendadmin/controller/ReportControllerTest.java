@@ -184,10 +184,9 @@ class ReportControllerTest {
     void list_returnsAvailableReports() throws Exception {
         mockMvc.perform(get("/api/relatorios").header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].relatorio").value(SLUG))
-                .andExpect(jsonPath("$[0].titulo").value("Relatório de Teste"))
-                .andExpect(jsonPath("$[0].exigePeriodo").value(true))
-                .andExpect(jsonPath("$[0].periodoPadrao").value("SEMANA"));
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].titulo", SLUG).value("Relatório de Teste"))
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].exigePeriodo", SLUG).value(true))
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].periodoPadrao", SLUG).value("SEMANA"));
     }
 
     @Test

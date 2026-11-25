@@ -54,6 +54,10 @@
             padding: 4pt;
         }
 
+        tbody td.center {
+            white-space: nowrap;
+        }
+
         .vazio {
             padding: 12pt;
             text-align: center;
@@ -92,6 +96,7 @@
     <tr th:each="linha : ${linhas}">
         <td th:each="celula, iter : ${linha}"
             th:text="${celula}"
+            th:class="${colunas[iter.index].alinhamento}"
             th:style="'text-align: ' + ${colunas[iter.index].alinhamento}">Valor</td>
     </tr>
     <tr th:if="${#lists.isEmpty(linhas)}">
