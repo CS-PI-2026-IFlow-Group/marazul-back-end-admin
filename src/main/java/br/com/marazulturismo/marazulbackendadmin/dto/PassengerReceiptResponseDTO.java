@@ -10,6 +10,7 @@ public record PassengerReceiptResponseDTO(
         String passengerName,
         String passengerCpf,
         BigDecimal amountPaid,
+        String amountPaidInWords,
         String originCity,
         String originStateAcronym,
         String destinationCity,

@@ -61,7 +61,8 @@ public class PassengerReceiptService {
         return receipts;
     }
 
-    private PassengerReceiptResponseDTO receipt(Trip trip, TripPassenger payment, LocalDateTime issuedAt) {
+    private PassengerReceiptResponseDTO receipt(
+            Trip trip, TripPassenger payment, LocalDateTime issuedAt) {
         return new PassengerReceiptResponseDTO(
                 "REC-" + trip.getId() + "-" + payment.getPassenger().getId(),
                 trip.getId(),
@@ -69,6 +70,7 @@ public class PassengerReceiptService {
                 payment.getPassenger().getName(),
                 payment.getPassenger().getCpf(),
                 payment.getAmountPaid(),
+                MoneyInWords.convert(payment.getAmountPaid()),
                 trip.getOriginCity().getName(),
                 trip.getOriginCity().getState().getAcronym(),
                 trip.getDestinationCity().getName(),

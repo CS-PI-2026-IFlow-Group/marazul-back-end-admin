@@ -9,6 +9,7 @@ import org.thymeleaf.context.Context;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -32,6 +33,7 @@ public class PassengerReceiptPdfService {
         }
         Context context = new Context(BRAZIL);
         NumberFormat currency = NumberFormat.getCurrencyInstance(BRAZIL);
+        currency.setRoundingMode(RoundingMode.HALF_UP);
         context.setVariable("receipts", receipts.stream().map(receipt -> Map.of(
                 "data", receipt,
                 "cpf", PassengerListPdfService.formatCpf(receipt.passengerCpf()),

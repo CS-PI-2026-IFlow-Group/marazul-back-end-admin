@@ -28,7 +28,9 @@
     <div class="amount" th:text="${receipt.amount}"></div>
     <p>Recebemos de <strong th:text="${receipt.data.passengerName}"></strong>,
         CPF <span th:text="${receipt.cpf}"></span>, a importância de
-        <strong th:text="${receipt.amount}"></strong>, referente ao pagamento da viagem abaixo.</p>
+        <strong th:text="${receipt.amount}"></strong>
+        (<span th:text="${receipt.data.amountPaidInWords}"></span>),
+        referente ao pagamento da viagem abaixo.</p>
     <p><strong>Trecho:</strong>
         <span th:text="${receipt.data.originCity + '/' + receipt.data.originStateAcronym + ' para ' + receipt.data.destinationCity + '/' + receipt.data.destinationStateAcronym}"></span><br />
         <strong>Saída:</strong> <span th:text="${receipt.departure}"></span><br />
