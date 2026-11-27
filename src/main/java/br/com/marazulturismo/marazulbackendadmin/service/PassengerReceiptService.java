@@ -7,33 +7,34 @@ import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationExcepti
 import br.com.marazulturismo.marazulbackendadmin.model.Trip;
 import br.com.marazulturismo.marazulbackendadmin.model.TripPassenger;
 import br.com.marazulturismo.marazulbackendadmin.repository.TripRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.TripPassengerRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class PassengerReceiptService {
 
     private final TripRepository tripRepository;
+    private final TripPassengerRepository tripPassengerRepository;
     private final String companyName;
 
     public PassengerReceiptService(TripRepository tripRepository,
+                                   TripPassengerRepository tripPassengerRepository,
                                    @Value("${app.report.company-name:Marazul Turismo}") String companyName) {
         this.tripRepository = tripRepository;
+        this.tripPassengerRepository = tripPassengerRepository;
         this.companyName = companyName;
     }
 
     @Transactional(readOnly = true)
     public PassengerReceiptResponseDTO generate(Long tripId, Long passengerId) {
-        Trip trip = tripRepository.findById(tripId)
+        Trip trip = tripRepository.findForReceiptById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
-        TripPassenger payment = trip.getPassengers().stream()
-                .filter(item -> item.getPassenger().getId().equals(passengerId))
-                .findFirst()
+        TripPassenger payment = tripPassengerRepository.findForReceipt(tripId, passengerId)
                 .orElseThrow(() -> new PassengerNotFoundException(passengerId));
 
         if (payment.getAmountPaid() == null || payment.getAmountPaid().signum() <= 0) {
@@ -46,12 +47,11 @@ public class PassengerReceiptService {
 
     @Transactional(readOnly = true)
     public List<PassengerReceiptResponseDTO> generateAll(Long tripId) {
-        Trip trip = tripRepository.findById(tripId)
+        Trip trip = tripRepository.findForReceiptById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
         LocalDateTime issuedAt = LocalDateTime.now();
-        List<PassengerReceiptResponseDTO> receipts = trip.getPassengers().stream()
+        List<PassengerReceiptResponseDTO> receipts = tripPassengerRepository.findForReceiptsByTripId(tripId).stream()
                 .filter(payment -> payment.getAmountPaid() != null && payment.getAmountPaid().signum() > 0)
-                .sorted(Comparator.comparing(payment -> payment.getPassenger().getId()))
                 .map(payment -> receipt(trip, payment, issuedAt))
                 .toList();
         if (receipts.isEmpty()) {

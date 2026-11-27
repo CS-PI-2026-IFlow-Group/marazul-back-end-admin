@@ -4,6 +4,9 @@ import br.com.marazulturismo.marazulbackendadmin.enums.*;
 import br.com.marazulturismo.marazulbackendadmin.model.*;
 import br.com.marazulturismo.marazulbackendadmin.repository.*;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
+import br.com.marazulturismo.marazulbackendadmin.service.PassengerReceiptService;
+import jakarta.persistence.EntityManager;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +21,7 @@ import java.util.Date;
 import java.util.Set;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.pdfbox.rendering.PDFRenderer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import javax.imageio.ImageIO;
+import static org.assertj.core.api.Assertions.within;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.hamcrest.Matchers.containsString;
@@ -43,6 +43,8 @@ class PassengerReceiptControllerTest {
     @Autowired private VehicleRepository vehicleRepository;
     @Autowired private PassengerRepository passengerRepository;
     @Autowired private TripRepository tripRepository;
+    @Autowired private PassengerReceiptService passengerReceiptService;
+    @Autowired private EntityManager entityManager;
 
     private String token;
     private Trip trip;
@@ -122,6 +124,12 @@ class PassengerReceiptControllerTest {
         mockMvc.perform(get(URL, trip.getId(), passenger.getId())
                         .header("Authorization", "Bearer " + jwtService.generateToken(user)))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get(URL + "/pdf", trip.getId(), passenger.getId())
+                        .header("Authorization", "Bearer " + jwtService.generateToken(user)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/relatorios/recibo/{viagemId}/pdf", trip.getId())
+                        .header("Authorization", "Bearer " + jwtService.generateToken(user)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -134,14 +142,11 @@ class PassengerReceiptControllerTest {
                 .andReturn().getResponse().getContentAsByteArray();
         try (PDDocument document = PDDocument.load(bytes)) {
             assertThat(document.getNumberOfPages()).isEqualTo(1);
+            assertThat(document.getPage(0).getMediaBox().getWidth()).isCloseTo(595.28f, within(0.1f));
+            assertThat(document.getPage(0).getMediaBox().getHeight()).isCloseTo(420.94f, within(0.1f));
             assertThat(new PDFTextStripper().getText(document)).contains(
                     "Ana Recibo", "900.000.002-01", "125,50", "Marazul Turismo",
                     "REC-" + trip.getId() + "-" + passenger.getId());
-            Path preview = Path.of("target", "receipt-preview");
-            Files.createDirectories(preview);
-            Files.write(preview.resolve("individual.pdf"), bytes);
-            ImageIO.write(new PDFRenderer(document).renderImageWithDPI(0, 100), "png",
-                    preview.resolve("individual.png").toFile());
         }
     }
 
@@ -185,5 +190,33 @@ class PassengerReceiptControllerTest {
         mockMvc.perform(get("/api/relatorios/recibo/{viagemId}/pdf", trip.getId()).header("Authorization", token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.erro", containsString("não possui passageiros com valor pago")));
+    }
+
+    @Test
+    void batch_fetchesPassengersAndRouteInTwoQueries() {
+        for (int index = 2; index <= 6; index++) {
+            Passenger additional = passengerRepository.save(new Passenger(
+                    "Passageiro " + index, "9000000030" + index, null));
+            trip.addPassenger(new TripPassenger(trip, additional, new BigDecimal("200"), new BigDecimal("100")));
+        }
+        tripRepository.saveAndFlush(trip);
+        Long tripId = trip.getId();
+        entityManager.clear();
+        var statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        boolean previouslyEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+        try {
+            var receipts = passengerReceiptService.generateAll(tripId);
+            assertThat(receipts).hasSize(6);
+            assertThat(receipts).allSatisfy(receipt -> {
+                assertThat(receipt.passengerName()).isNotBlank();
+                assertThat(receipt.originStateAcronym()).isNotBlank();
+                assertThat(receipt.destinationStateAcronym()).isNotBlank();
+            });
+            assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
+        } finally {
+            statistics.setStatisticsEnabled(previouslyEnabled);
+        }
     }
 }
