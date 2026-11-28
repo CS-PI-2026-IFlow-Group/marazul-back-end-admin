@@ -1,5 +1,6 @@
 package br.com.marazulturismo.marazulbackendadmin.controller;
 
+import br.com.marazulturismo.marazulbackendadmin.dto.TripExpensesRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
@@ -64,6 +65,12 @@ public class TripController {
     public ResponseEntity<TripResponseDTO> update(@PathVariable Long id,
                                                   @RequestBody @Valid TripRequestDTO dto) {
         return ResponseEntity.ok(tripService.update(id, dto));
+    }
+
+    @PutMapping("/{id}/gastos")
+    public ResponseEntity<TripResponseDTO> updateExpenses(@PathVariable Long id,
+                                                          @RequestBody @Valid TripExpensesRequestDTO dto) {
+        return ResponseEntity.ok(tripService.updateExpenses(id, dto));
     }
 
     @PostMapping("/{id}/confirmar")
