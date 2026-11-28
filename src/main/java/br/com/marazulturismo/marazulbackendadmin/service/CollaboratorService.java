@@ -18,16 +18,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CollaboratorService {
 
     private final CollaboratorRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final PasswordSetupEmailService passwordSetupEmailService;
 
-    public CollaboratorService(CollaboratorRepository userRepository, ProfileRepository profileRepository) {
+    public CollaboratorService(CollaboratorRepository userRepository, ProfileRepository profileRepository,
+            PasswordSetupEmailService passwordSetupEmailService) {
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
+        this.passwordSetupEmailService = passwordSetupEmailService;
     }
 
     @Transactional(readOnly = true)
@@ -67,7 +71,24 @@ public class CollaboratorService {
         );
         applyStatus(employee, dto.status());
 
-        return EmployeeResponseDTO.fromEntity(userRepository.save(employee));
+        Collaborator saved = userRepository.save(employee);
+        EmployeeResponseDTO response = EmployeeResponseDTO.fromEntity(saved);
+        if (Boolean.TRUE.equals(saved.getIsUser())) {
+            return passwordSetupEmailService.send(saved)
+                    .map(response::withWarning)
+                    .orElse(response);
+        }
+        return response;
+    }
+
+    // Devolve o aviso de falha no envio do e-mail, se houver
+    @Transactional
+    public Optional<String> resendPasswordSetupEmail(Long id) {
+        Collaborator employee = findEntity(id);
+        if (!Boolean.TRUE.equals(employee.getIsUser())) {
+            throw new EmployeeValidationException("O colaborador não tem acesso ao sistema.");
+        }
+        return passwordSetupEmailService.send(employee);
     }
 
     @Transactional

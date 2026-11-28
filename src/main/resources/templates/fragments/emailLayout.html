@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+  Layout comum dos e-mails: cabeçalho, corpo e rodapé.
+  Só tabelas e estilo embutido, que é o que os clientes de e-mail respeitam.
+  O cabeçalho é texto sobre fundo de cor (sem imagem), então o e-mail continua
+  legível com as imagens bloqueadas. Logo, quando houver, entra aqui com URL absoluta.
+  Uso: th:replace="~{fragments/emailLayout :: layout(~{::title}, ~{::content})}"
+  Atributos como bgcolor, cellpadding e align são obsoletos no HTML5, mas o Outlook
+  desktop e outros clientes ignoram o CSS equivalente; por isso ficam, e a inspeção é suprimida.
+-->
+<!--suppress HtmlDeprecatedAttribute -->
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)" lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title th:replace="${title}">Marazul Turismo</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f2f2f2;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       bgcolor="#f2f2f2" style="background-color:#f2f2f2;">
+    <tr>
+        <td align="center" style="padding:24px 12px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   bgcolor="#ffffff" style="max-width:600px; background-color:#ffffff; border-radius:8px;">
+                <tr>
+                    <td align="center" bgcolor="#000000"
+                        style="background-color:#000000; padding:28px 24px; border-radius:8px 8px 0 0;
+                               font-family:Arial, Helvetica, sans-serif; font-size:26px; line-height:32px;
+                               font-weight:bold; letter-spacing:1px; color:#ffffff;">
+                        Marazul Turismo
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:32px 32px 24px 32px; font-family:Arial, Helvetica, sans-serif;
+                               font-size:16px; line-height:24px; color:#1a1a1a;">
+                        <th:block th:replace="${content}"></th:block>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:20px 32px 28px 32px; border-top:1px solid #e5e5e5;
+                               font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px;
+                               color:#666666;">
+                        <strong style="color:#000000;">Marazul Turismo</strong> &middot; Sistema administrativo<br>
+                        Esta é uma mensagem automática; não é preciso respondê-la.<br>
+                        Se você não esperava este e-mail, pode ignorá-lo com segurança.
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

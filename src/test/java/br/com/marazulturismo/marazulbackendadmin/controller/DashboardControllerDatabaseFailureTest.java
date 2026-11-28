@@ -51,20 +51,20 @@ class DashboardControllerDatabaseFailureTest {
     }
 
     @Test
-    void metrics_whenDatabaseFails_returns500() throws Exception {
+    void metrics_whenDatabaseFails_returnsPartialResponse() throws Exception {
         mockMvc.perform(get(METRICS_URL).header("Authorization", token))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.erro").exists());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalVehicles").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.activeEmployees").isNumber());
     }
 
     @Test
     void metrics_whenDatabaseFails_doesNotLeakInfrastructureDetails() throws Exception {
         mockMvc.perform(get(METRICS_URL).header("Authorization", token))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.trace").doesNotExist())
                 .andExpect(jsonPath("$.exception").doesNotExist())
-                .andExpect(jsonPath("$.erro").value(not(containsString("Exception"))))
-                .andExpect(jsonPath("$.erro").value(not(containsString("connection refused"))));
+                .andExpect(jsonPath("$.erro").doesNotExist());
     }
 
     private String validToken() {

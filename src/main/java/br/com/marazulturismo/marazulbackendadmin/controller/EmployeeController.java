@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/funcionario")
@@ -34,6 +35,15 @@ public class EmployeeController {
     @PostMapping
     public ResponseEntity<EmployeeResponseDTO> create(@RequestBody @Valid EmployeeRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(employeeService.create(dto));
+    }
+
+    @PostMapping("/{id}/reenviar-email")
+    public ResponseEntity<Map<String, String>> resendPasswordSetupEmail(@PathVariable Long id) {
+        return employeeService.resendPasswordSetupEmail(id)
+                .map(warning -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(Map.of("mensagem", warning)))
+                .orElseGet(() -> ResponseEntity.ok(
+                        Map.of("mensagem", "E-mail de definição de senha reenviado.")));
     }
 
     @GetMapping

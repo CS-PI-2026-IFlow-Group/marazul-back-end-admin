@@ -3,6 +3,9 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 import br.com.marazulturismo.marazulbackendadmin.dto.DashboardMetricsResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.repository.CollaboratorRepository;
 import br.com.marazulturismo.marazulbackendadmin.repository.VehicleRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.ClientRepository;
+import br.com.marazulturismo.marazulbackendadmin.repository.PassengerRepository;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +27,12 @@ class DashboardServiceTest {
     @Mock
     private CollaboratorRepository userRepository;
 
+    @Mock
+    private ClientRepository clientRepository;
+
+    @Mock
+    private PassengerRepository passengerRepository;
+
     @InjectMocks
     private DashboardService dashboardService;
 
@@ -31,11 +40,15 @@ class DashboardServiceTest {
     void metrics_returnsCountsFromRepositories() {
         when(vehicleRepository.count()).thenReturn(12L);
         when(userRepository.countActiveEmployees()).thenReturn(7L);
+        when(clientRepository.count()).thenReturn(4L);
+        when(passengerRepository.count()).thenReturn(3L);
 
         DashboardMetricsResponseDTO metrics = dashboardService.metrics();
 
         assertThat(metrics.totalVehicles()).isEqualTo(12L);
         assertThat(metrics.activeEmployees()).isEqualTo(7L);
+        assertThat(metrics.totalClients()).isEqualTo(4L);
+        assertThat(metrics.totalPassengers()).isEqualTo(3L);
     }
 
     @Test
@@ -48,6 +61,21 @@ class DashboardServiceTest {
         verify(vehicleRepository, never()).findAll();
         verify(vehicleRepository, never()).findByStatus(any());
         verify(userRepository, never()).findAll();
+        verify(clientRepository, never()).findAll();
+        verify(passengerRepository, never()).findAll();
+    }
+
+    @Test
+    void metrics_returnsOtherCountsWhenOneFails() {
+        when(vehicleRepository.count()).thenThrow(new DataAccessResourceFailureException("unavailable"));
+        when(clientRepository.count()).thenReturn(4L);
+        when(passengerRepository.count()).thenReturn(3L);
+
+        DashboardMetricsResponseDTO metrics = dashboardService.metrics();
+
+        assertThat(metrics.totalVehicles()).isNull();
+        assertThat(metrics.totalClients()).isEqualTo(4L);
+        assertThat(metrics.totalPassengers()).isEqualTo(3L);
     }
 
     @Test

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="'Lista de Passageiros - Viagem ' + ${tripId}">Lista de Passageiros</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: Helvetica, sans-serif;
+                font-size: 7pt;
+                color: #666666;
+            }
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 9pt;
+            color: #111111;
+        }
+
+        .cabecalho {
+            border-bottom: 2px solid #111111;
+            padding-bottom: 6pt;
+            margin-bottom: 10pt;
+        }
+
+        .empresa {
+            font-size: 15pt;
+            font-weight: bold;
+        }
+
+        .titulo {
+            font-size: 12pt;
+            margin-top: 2pt;
+        }
+
+        .viagem {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10pt;
+        }
+
+        .viagem td {
+            padding: 2pt 0;
+            vertical-align: top;
+        }
+
+        .rotulo {
+            width: 2.6cm;
+            font-weight: bold;
+            color: #444444;
+        }
+
+        .responsavel {
+            border: 2px solid #111111;
+            background-color: #eeeeee;
+            padding: 6pt 8pt;
+            margin-bottom: 12pt;
+        }
+
+        .responsavel-rotulo {
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #444444;
+        }
+
+        .responsavel-nome {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-top: 2pt;
+        }
+
+        .responsavel-telefone {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-top: 2pt;
+        }
+
+        .passageiros {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .passageiros thead th {
+            background-color: #eeeeee;
+            border-bottom: 1px solid #999999;
+            padding: 4pt;
+            font-size: 8pt;
+            text-align: left;
+        }
+
+        .passageiros tbody td {
+            border-bottom: 1px solid #dddddd;
+            padding: 4pt;
+        }
+
+        .passageiros tr {
+            page-break-inside: avoid;
+        }
+
+        .numero {
+            width: 1cm;
+            text-align: right;
+        }
+
+        .destaque td {
+            background-color: #e2e2e2;
+            font-weight: bold;
+        }
+
+        .selo {
+            font-size: 7pt;
+            border: 1px solid #111111;
+            padding: 0 3pt;
+            margin-left: 4pt;
+        }
+
+        .totais {
+            margin-top: 10pt;
+            border-top: 2px solid #111111;
+            padding-top: 6pt;
+        }
+
+        .total {
+            font-weight: bold;
+        }
+
+        .meta {
+            font-size: 8pt;
+            color: #444444;
+            margin-top: 2pt;
+        }
+
+        .assinaturas {
+            width: 100%;
+            margin-top: 40pt;
+            border-collapse: collapse;
+            page-break-inside: avoid;
+        }
+
+        .assinaturas td {
+            width: 50%;
+            padding: 0 12pt;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .linha {
+            border-top: 1px solid #111111;
+            padding-top: 3pt;
+        }
+    </style>
+</head>
+<body>
+<div class="cabecalho">
+    <div class="empresa" th:text="${company}">Marazul Turismo</div>
+    <div class="titulo">Lista de Passageiros</div>
+</div>
+
+<table class="viagem">
+    <tr>
+        <td class="rotulo">Viagem</td>
+        <td th:text="${tripId}">1</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Trecho</td>
+        <td th:text="${route}">Origem/UF para Destino/UF</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Saída</td>
+        <td th:text="${departure}">01/01/2026 08:00</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Ônibus</td>
+        <td th:text="${vehicle}">Prefixo - Placa</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Motoristas</td>
+        <td th:text="${drivers}">Motorista</td>
+    </tr>
+</table>
+
+<div class="responsavel" th:if="${responsible != null}">
+    <div class="responsavel-rotulo">Responsável pelo grupo</div>
+    <div class="responsavel-nome" th:text="${responsible.name}">Nome</div>
+    <div class="responsavel-telefone" th:text="${responsible.phone}">(00) 00000-0000</div>
+</div>
+
+<table class="passageiros">
+    <thead>
+    <tr>
+        <th class="numero">Nº</th>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Telefone</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="passenger : ${passengers}" th:classappend="${passenger.responsible} ? 'destaque'">
+        <td class="numero" th:text="${passenger.number}">1</td>
+        <td>
+            <span th:text="${passenger.name}">Nome</span>
+            <span class="selo" th:if="${passenger.responsible}">RESPONSÁVEL</span>
+        </td>
+        <td th:text="${passenger.cpf}">000.000.000-00</td>
+        <td th:text="${passenger.phone}">(00) 00000-0000</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="totais">
+    <div class="total" th:text="'Total de passageiros: ' + ${total}">Total de passageiros: 0</div>
+    <div class="meta" th:text="'Emitido em: ' + ${issuedAt}">Emitido em</div>
+</div>
+
+<table class="assinaturas">
+    <tr>
+        <td>
+            <div class="linha">Conferência do motorista</div>
+        </td>
+        <td>
+            <div class="linha">Assinatura do responsável</div>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -35,9 +36,10 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@RequestBody @Valid RegisterRequestDTO dto) {
-        authService.register(dto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("mensagem", "Usuário cadastrado com sucesso."));
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("mensagem", "Usuário cadastrado com sucesso.");
+        authService.register(dto).ifPresent(warning -> body.put("aviso", warning));
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     @PostMapping("/login")

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="'Resultado da Viagem ' + ${viagemId}">Resultado da Viagem</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 9pt;
+            color: #111111;
+        }
+
+        .cabecalho {
+            border-bottom: 2px solid #111111;
+            padding-bottom: 6pt;
+            margin-bottom: 10pt;
+        }
+
+        .empresa {
+            font-size: 15pt;
+            font-weight: bold;
+        }
+
+        .titulo {
+            font-size: 12pt;
+            margin-top: 2pt;
+        }
+
+        .viagem {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12pt;
+        }
+
+        .viagem td {
+            padding: 2pt 0;
+            vertical-align: top;
+        }
+
+        .rotulo {
+            width: 2.6cm;
+            font-weight: bold;
+            color: #444444;
+        }
+
+        .valores {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14pt;
+        }
+
+        .valores td {
+            border-bottom: 1px solid #dddddd;
+            padding: 4pt;
+        }
+
+        .valores .resultado td {
+            border-top: 2px solid #111111;
+            border-bottom: none;
+            font-size: 11pt;
+            font-weight: bold;
+        }
+
+        .selo {
+            font-size: 7pt;
+            border: 1px solid #111111;
+            padding: 0 3pt;
+            margin-left: 4pt;
+        }
+
+        .secao {
+            font-size: 10pt;
+            font-weight: bold;
+            margin-bottom: 4pt;
+        }
+
+        .gastos {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .gastos thead th {
+            background-color: #eeeeee;
+            border-bottom: 1px solid #999999;
+            padding: 4pt;
+            font-size: 8pt;
+            text-align: left;
+        }
+
+        .gastos thead th.valor {
+            text-align: right;
+        }
+
+        .gastos tbody td {
+            border-bottom: 1px solid #dddddd;
+            padding: 4pt;
+        }
+
+        .gastos tr {
+            page-break-inside: avoid;
+        }
+
+        .valor {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .vazio {
+            padding: 12pt;
+            text-align: center;
+            color: #666666;
+        }
+
+        .meta {
+            font-size: 8pt;
+            color: #444444;
+            margin-top: 10pt;
+        }
+    </style>
+</head>
+<body>
+<div class="cabecalho">
+    <div class="empresa" th:text="${empresa}">Marazul Turismo</div>
+    <div class="titulo">Resultado da viagem</div>
+</div>
+
+<table class="viagem">
+    <tr>
+        <td class="rotulo">Viagem</td>
+        <td th:text="${viagemId}">1</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Trecho</td>
+        <td th:text="${trecho}">Origem/UF – Destino/UF</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Saída</td>
+        <td th:text="${saida}">01/01/2026 08:00</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Cliente</td>
+        <td th:text="${cliente}">Cliente</td>
+    </tr>
+    <tr>
+        <td class="rotulo">Situação</td>
+        <td th:text="${situacao}">Concluída</td>
+    </tr>
+</table>
+
+<table class="valores">
+    <tr th:each="item : ${valores}">
+        <td th:text="${item.titulo}">Cobrado</td>
+        <td class="valor" th:text="${item.valor}">R$ 0,00</td>
+    </tr>
+    <tr class="resultado">
+        <td>
+            <span>Resultado</span>
+            <span class="selo" th:if="${prejuizo}">PREJUÍZO</span>
+        </td>
+        <td class="valor" th:text="${resultado}">R$ 0,00</td>
+    </tr>
+</table>
+
+<div class="secao">Gastos da viagem</div>
+<table class="gastos">
+    <thead>
+    <tr>
+        <th>Descrição</th>
+        <th class="valor">Valor</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="gasto : ${gastos}">
+        <td th:text="${gasto.descricao}">Diesel</td>
+        <td class="valor" th:text="${gasto.valor}">R$ 0,00</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(gastos)}">
+        <td class="vazio" colspan="2">Nenhum gasto lançado para esta viagem.</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="meta" th:text="'Emitido em: ' + ${emitidoEm}">Emitido em</div>
+</body>
+</html>

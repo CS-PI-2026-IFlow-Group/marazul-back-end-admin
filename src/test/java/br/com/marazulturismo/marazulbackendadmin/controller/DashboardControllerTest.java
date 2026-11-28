@@ -127,9 +127,11 @@ class DashboardControllerTest {
     void metrics_returnsOnlyTheAgreedFields() throws Exception {
         mockMvc.perform(get(METRICS_URL).header("Authorization", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(aMapWithSize(2)))
+                .andExpect(jsonPath("$").value(aMapWithSize(4)))
                 .andExpect(jsonPath("$.totalVehicles").exists())
-                .andExpect(jsonPath("$.activeEmployees").exists());
+                .andExpect(jsonPath("$.activeEmployees").exists())
+                .andExpect(jsonPath("$.totalClients").isNumber())
+                .andExpect(jsonPath("$.totalPassengers").isNumber());
     }
 
     @Test

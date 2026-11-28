@@ -8,6 +8,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -20,7 +24,9 @@ public class SessionController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<SessionUserResponseDTO> me(@AuthenticationPrincipal AuthenticatedUser principal) {
-        return ResponseEntity.ok(authService.findSessionUser(principal.id()));
+    public ResponseEntity<SessionUserResponseDTO> me(@AuthenticationPrincipal AuthenticatedUser principal, Authentication authentication) {
+        List<String> permissoes = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).sorted().toList();
+
+        return ResponseEntity.ok(authService.findSessionUser(principal.id(), principal.profile(), permissoes));
     }
 }

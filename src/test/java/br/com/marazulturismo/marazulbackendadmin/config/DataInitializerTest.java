@@ -34,6 +34,7 @@ class DataInitializerTest {
             RequestMethod.POST, "create",
             RequestMethod.GET, "view",
             RequestMethod.PUT, "edit",
+            RequestMethod.PATCH, "edit",
             RequestMethod.DELETE, "delete");
 
     @Autowired
@@ -85,7 +86,12 @@ class DataInitializerTest {
                         tuple("passageiros", "edit"),
                         tuple("passageiros", "delete"),
                         tuple("estados", "view"),
-                        tuple("cidades", "view"));
+                        tuple("cidades", "view"),
+                        tuple("viagens", "create"),
+                        tuple("viagens", "view"),
+                        tuple("viagens", "edit"),
+                        tuple("viagens", "delete"),
+                        tuple("relatorios", "view"));
         assertThat(adminProfile().getPermissions()).containsExactlyInAnyOrderElementsOf(permissions);
     }
 

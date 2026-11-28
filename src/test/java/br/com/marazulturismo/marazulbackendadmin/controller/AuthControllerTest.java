@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -119,7 +119,7 @@ class AuthControllerTest {
 
         mockMvc.perform(get("/api/dashboard/metricas")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.erro").value("Acesso negado. Seu perfil não tem permissão para este recurso.")).andExpect(jsonPath("$.message").value("Acesso negado. Seu perfil não tem permissão para este recurso."));
     }
 
     private Collaborator saveCollaborator(String email, boolean isUser, Profile profile) {

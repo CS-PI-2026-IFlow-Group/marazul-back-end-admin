@@ -97,6 +97,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
     }
 
+    @ExceptionHandler(TripNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleTripNotFound(TripNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(CityNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleCityNotFound(CityNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
+
     @ExceptionHandler(EmployeeValidationException.class)
     public ResponseEntity<Map<String, String>> handleEmployeeValidation(EmployeeValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
@@ -114,6 +124,26 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PassengerValidationException.class)
     public ResponseEntity<Map<String, String>> handlePassengerValidation(PassengerValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(TripValidationException.class)
+    public ResponseEntity<Map<String, String>> handleTripValidation(TripValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReportNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleReportNotFound(ReportNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReportPeriodValidationException.class)
+    public ResponseEntity<Map<String, String>> handleReportPeriodValidation(ReportPeriodValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ReportFilterValidationException.class)
+    public ResponseEntity<Map<String, String>> handleReportFilterValidation(ReportFilterValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
 

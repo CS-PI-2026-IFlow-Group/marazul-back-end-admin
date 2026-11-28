@@ -7,7 +7,9 @@ public record ClientDetailResponseDTO(
         String name,
         String cpf,
         String cnpj,
-        AddressResponseDTO address
+        AddressResponseDTO address,
+        String phone,
+        String email
 ) {
 
     public static ClientDetailResponseDTO fromEntity(Client client) {
@@ -19,7 +21,9 @@ public record ClientDetailResponseDTO(
                 client.getName(),
                 client.getCpf(),
                 client.getCnpj(),
-                addressDto
+                addressDto,
+                client.getPhone(),
+                client.getEmail()
         );
     }
 }

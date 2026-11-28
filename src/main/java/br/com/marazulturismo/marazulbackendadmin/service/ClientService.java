@@ -60,7 +60,9 @@ public class ClientService {
         City city = findCity(dto.address());
         Address address = addressRepository.save(new Address(
                 dto.address().street(), dto.address().number(), dto.address().complement(), city));
-        Client client = clientRepository.save(new Client(dto.name().trim(), cpf, cnpj, address));
+        Client client = new Client(dto.name().trim(), cpf, cnpj, address);
+        client.updateContact(dto.phone(), dto.email());
+        client = clientRepository.save(client);
         return ClientDetailResponseDTO.fromEntity(client);
     }
 
@@ -75,6 +77,7 @@ public class ClientService {
         City city = findCity(dto.address());
 
         client.update(dto.name().trim(), cpf, cnpj);
+        client.updateContact(dto.phone(), dto.email());
         updateAddress(client, dto.address(), city);
 
         return ClientResponseDTO.fromEntity(clientRepository.save(client));
