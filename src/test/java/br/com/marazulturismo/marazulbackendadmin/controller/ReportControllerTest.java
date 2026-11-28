@@ -2,10 +2,12 @@ package br.com.marazulturismo.marazulbackendadmin.controller;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportColumnDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportContentDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ReportFilterDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportPeriodDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportTotalDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
 import br.com.marazulturismo.marazulbackendadmin.enums.ReportDefaultPeriod;
+import br.com.marazulturismo.marazulbackendadmin.enums.ReportFilterType;
 import br.com.marazulturismo.marazulbackendadmin.enums.ReportValueFormat;
 import br.com.marazulturismo.marazulbackendadmin.model.Collaborator;
 import br.com.marazulturismo.marazulbackendadmin.model.Permission;
@@ -15,6 +17,8 @@ import br.com.marazulturismo.marazulbackendadmin.repository.PermissionRepository
 import br.com.marazulturismo.marazulbackendadmin.repository.ProfileRepository;
 import br.com.marazulturismo.marazulbackendadmin.service.JwtService;
 import br.com.marazulturismo.marazulbackendadmin.service.ReportDefinition;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +33,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -47,6 +54,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ReportControllerTest {
 
     private static final String SLUG = "relatorio-de-teste";
+    private static final String FILTERED_SLUG = "relatorio-com-filtro";
 
     @TestConfiguration
     static class StubReportConfiguration {
@@ -98,6 +106,42 @@ class ReportControllerTest {
                 }
             };
         }
+
+        @Bean
+        ReportDefinition filteredReportDefinition() {
+            return new ReportDefinition() {
+
+                @Override
+                public String slug() {
+                    return FILTERED_SLUG;
+                }
+
+                @Override
+                public String title() {
+                    return "Relatório com Filtro";
+                }
+
+                @Override
+                public List<ReportColumnDTO> columns() {
+                    return List.of(ReportColumnDTO.text("clienteId", "Cliente"));
+                }
+
+                @Override
+                public List<ReportFilterDTO> filters() {
+                    return List.of(new ReportFilterDTO("clienteId", "Cliente", ReportFilterType.CLIENTE));
+                }
+
+                @Override
+                public ReportContentDTO content(ReportPeriodDTO period) {
+                    return content(period, Map.of());
+                }
+
+                @Override
+                public ReportContentDTO content(ReportPeriodDTO period, Map<String, String> filters) {
+                    return ReportContentDTO.of(List.of(new LinkedHashMap<String, Object>(filters)));
+                }
+            };
+        }
     }
 
     @Autowired
@@ -120,7 +164,20 @@ class ReportControllerTest {
 
     @Test
     void reportDefinition_defaultsToMonthPeriod() {
-        ReportDefinition definition = new ReportDefinition() {
+        assertEquals(ReportDefaultPeriod.MES, minimalDefinition(ReportContentDTO.empty()).defaultPeriod());
+    }
+
+    @Test
+    void reportDefinition_withoutFilters_ignoresTheReceivedValues() {
+        ReportContentDTO content = ReportContentDTO.empty();
+        ReportDefinition definition = minimalDefinition(content);
+
+        assertEquals(List.of(), definition.filters());
+        assertSame(content, definition.content(null, Map.of("clienteId", "1")));
+    }
+
+    private static ReportDefinition minimalDefinition(ReportContentDTO content) {
+        return new ReportDefinition() {
             @Override
             public String slug() {
                 return "relatorio-padrao";
@@ -138,11 +195,9 @@ class ReportControllerTest {
 
             @Override
             public ReportContentDTO content(ReportPeriodDTO period) {
-                return ReportContentDTO.empty();
+                return content;
             }
         };
-
-        assertEquals(ReportDefaultPeriod.MES, definition.defaultPeriod());
     }
 
     @BeforeEach
@@ -187,6 +242,41 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$[?(@.relatorio == '%s')].titulo", SLUG).value("Relatório de Teste"))
                 .andExpect(jsonPath("$[?(@.relatorio == '%s')].exigePeriodo", SLUG).value(true))
                 .andExpect(jsonPath("$[?(@.relatorio == '%s')].periodoPadrao", SLUG).value("SEMANA"));
+    }
+
+    @Test
+    void list_showsTheFiltersEachReportAccepts() throws Exception {
+        mockMvc.perform(get("/api/relatorios").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].filtros[0]", SLUG).doesNotExist())
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].filtros[0].chave", FILTERED_SLUG).value("clienteId"))
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].filtros[0].titulo", FILTERED_SLUG).value("Cliente"))
+                .andExpect(jsonPath("$[?(@.relatorio == '%s')].filtros[0].tipo", FILTERED_SLUG).value("CLIENTE"));
+    }
+
+    @Test
+    void table_passesOnlyTheDeclaredFiltersToTheReport() throws Exception {
+        mockMvc.perform(get("/api/relatorios/{relatorio}", FILTERED_SLUG)
+                        .param("dataInicio", "2026-01-01")
+                        .param("dataFim", "2026-01-31")
+                        .param("clienteId", " 7 ")
+                        .param("outro", "ignorado")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.linhas[0].clienteId").value("7"))
+                .andExpect(jsonPath("$.linhas[0].outro").doesNotExist())
+                .andExpect(jsonPath("$.linhas[0].dataInicio").doesNotExist());
+    }
+
+    @Test
+    void table_withBlankFilter_doesNotPassItToTheReport() throws Exception {
+        mockMvc.perform(get("/api/relatorios/{relatorio}", FILTERED_SLUG)
+                        .param("dataInicio", "2026-01-01")
+                        .param("dataFim", "2026-01-31")
+                        .param("clienteId", "  ")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.linhas[0].clienteId").doesNotExist());
     }
 
     @Test
@@ -258,6 +348,23 @@ class ReportControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition",
                         containsString("relatorio-" + SLUG + "-2026-01-01-a-2026-01-31.pdf")));
+    }
+
+    @Test
+    void pdf_passesTheDeclaredFiltersToTheReport() throws Exception {
+        byte[] pdf = mockMvc.perform(get("/api/relatorios/{relatorio}/pdf", FILTERED_SLUG)
+                        .param("dataInicio", "2026-01-01")
+                        .param("dataFim", "2026-01-31")
+                        .param("clienteId", "4821")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            assertThat(new PDFTextStripper().getText(document)).contains("4821");
+        }
     }
 
     @Test

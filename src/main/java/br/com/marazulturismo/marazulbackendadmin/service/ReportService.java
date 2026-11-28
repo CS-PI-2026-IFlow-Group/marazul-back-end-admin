@@ -1,6 +1,7 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportContentDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.ReportFilterDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportPeriodDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportSummaryDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.ReportTableResponseDTO;
@@ -29,14 +30,19 @@ public class ReportService {
     public List<ReportSummaryDTO> available() {
         return definitions.values().stream()
                 .map(it -> new ReportSummaryDTO(
-                        it.slug(), it.title(), it.requiresPeriod(), it.defaultPeriod()))
+                        it.slug(), it.title(), it.requiresPeriod(), it.defaultPeriod(), it.filters()))
                 .toList();
     }
 
     public ReportTableResponseDTO generate(String slug, LocalDate startDate, LocalDate endDate) {
+        return generate(slug, startDate, endDate, Map.of());
+    }
+
+    public ReportTableResponseDTO generate(String slug, LocalDate startDate, LocalDate endDate,
+                                           Map<String, String> parameters) {
         ReportDefinition definition = resolve(slug);
         ReportPeriodDTO period = period(definition, startDate, endDate);
-        ReportContentDTO content = definition.content(period);
+        ReportContentDTO content = definition.content(period, declaredFilters(definition, parameters));
 
         return new ReportTableResponseDTO(
                 definition.slug(),
@@ -64,5 +70,21 @@ public class ReportService {
         }
 
         return ReportPeriodDTO.of(startDate, endDate);
+    }
+
+    private static Map<String, String> declaredFilters(ReportDefinition definition, Map<String, String> parameters) {
+        Map<String, String> filters = new LinkedHashMap<>();
+        if (parameters == null) {
+            return filters;
+        }
+
+        for (ReportFilterDTO filter : definition.filters()) {
+            String value = parameters.get(filter.chave());
+            if (value != null && !value.isBlank()) {
+                filters.put(filter.chave(), value.trim());
+            }
+        }
+
+        return filters;
     }
 }

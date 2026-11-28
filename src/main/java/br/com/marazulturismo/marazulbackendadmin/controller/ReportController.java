@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/relatorios")
@@ -38,18 +39,20 @@ public class ReportController {
     public ResponseEntity<ReportTableResponseDTO> table(
             @PathVariable String relatorio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
+            @RequestParam Map<String, String> parametros) {
 
-        return ResponseEntity.ok(reportService.generate(relatorio, dataInicio, dataFim));
+        return ResponseEntity.ok(reportService.generate(relatorio, dataInicio, dataFim, parametros));
     }
 
     @GetMapping("/{relatorio}/pdf")
     public ResponseEntity<byte[]> pdf(
             @PathVariable String relatorio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
+            @RequestParam Map<String, String> parametros) {
 
-        ReportTableResponseDTO report = reportService.generate(relatorio, dataInicio, dataFim);
+        ReportTableResponseDTO report = reportService.generate(relatorio, dataInicio, dataFim, parametros);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
