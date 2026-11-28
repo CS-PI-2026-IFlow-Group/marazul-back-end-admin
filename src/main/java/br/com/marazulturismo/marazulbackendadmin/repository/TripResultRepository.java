@@ -8,10 +8,11 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TripResultRepository extends Repository<Trip, Long> {
 
-    @Query("""
+    String SELECT_RESULT = """
             select new br.com.marazulturismo.marazulbackendadmin.dto.TripResultDTO(
                 t.id, t.plannedDepartureOrigin,
                 origin.name, originState.acronym, destination.name, destinationState.acronym,
@@ -24,6 +25,9 @@ public interface TripResultRepository extends Repository<Trip, Long> {
             join t.destinationCity destination
             join destination.state destinationState
             left join t.client client
+            """;
+
+    @Query(SELECT_RESULT + """
             where t.plannedDepartureOrigin >= :periodStart
               and t.plannedDepartureOrigin < :periodEnd
               and (:clientId is null or client.id = :clientId)
@@ -32,4 +36,7 @@ public interface TripResultRepository extends Repository<Trip, Long> {
     List<TripResultDTO> findResultsBetween(@Param("periodStart") LocalDateTime periodStart,
                                            @Param("periodEnd") LocalDateTime periodEnd,
                                            @Param("clientId") Long clientId);
+
+    @Query(SELECT_RESULT + "where t.id = :tripId")
+    Optional<TripResultDTO> findResultByTripId(@Param("tripId") Long tripId);
 }

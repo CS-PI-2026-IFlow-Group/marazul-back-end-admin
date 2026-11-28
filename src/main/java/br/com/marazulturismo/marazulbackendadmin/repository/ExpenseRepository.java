@@ -10,4 +10,6 @@ import java.util.List;
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findByTripId(Long tripId);
+
+    List<Expense> findByTripIdOrderByIdAsc(Long tripId);
 }
