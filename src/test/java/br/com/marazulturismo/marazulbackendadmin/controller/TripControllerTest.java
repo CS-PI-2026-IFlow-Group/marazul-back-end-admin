@@ -900,6 +900,90 @@ public class TripControllerTest {
                 .andExpect(jsonPath("$.erro").exists());
     }
 
+    @Test
+    void updateExpenses_onInProgressTrip_returns200AcrossAllInProgressStagesAndClearsWhenEmpty() throws Exception {
+        Map<String, Object> body = validTrip();
+        body.put("notes", "Observação preservada");
+        body.put("expenses", List.of(Map.of("description", "Gasto inicial", "amount", 20.00)));
+        long id = scheduledId(body);
+        tripRepository.flush();
+
+        advance(id, Map.of("status", "CONFIRMED")).andExpect(status().isOk());
+
+        for (String stage : List.of("LEFT_ORIGIN", "ARRIVED_DESTINATION", "LEFT_DESTINATION", "ARRIVED_ORIGIN")) {
+            advance(id, Map.of("status", stage)).andExpect(status().isOk());
+
+            updateExpenses(id, Map.of("expenses", List.of(
+                    Map.of("description", "Pedágio BR-101", "amount", 48.50),
+                    Map.of("description", "Estacionamento", "amount", 120.00))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(stage))
+                    .andExpect(jsonPath("$.notes").value("Observação preservada"))
+                    .andExpect(jsonPath("$.expenses.length()").value(2))
+                    .andExpect(jsonPath("$.expenses[0].id").isNumber())
+                    .andExpect(jsonPath("$.totalExpenses").value(168.50));
+
+            assertThat(expenseRepository.findByTripId(id)).hasSize(2);
+        }
+
+        update(id, validTrip())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("em andamento")));
+
+        updateExpenses(id, Map.of("expenses", List.of()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses.length()").value(0))
+                .andExpect(jsonPath("$.totalExpenses").value(0));
+
+        assertThat(expenseRepository.findByTripId(id)).isEmpty();
+    }
+
+    @Test
+    void updateExpenses_onCompletedTrip_returns400() throws Exception {
+        long id = tripAdvancedThrough(ALL_STAGES);
+
+        updateExpenses(id, Map.of("expenses", List.of(
+                Map.of("description", "Pedágio", "amount", 48.50))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(containsString("concluída")));
+    }
+
+    @Test
+    void updateExpenses_withInvalidPayload_returns400() throws Exception {
+        long id = tripAdvancedThrough("CONFIRMED", "LEFT_ORIGIN");
+
+        updateExpenses(id, Map.of())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.expenses").value("A lista de gastos é obrigatória."));
+
+        updateExpenses(id, Map.of("expenses", List.of(Map.of("description", "  ", "amount", 10.00))))
+                .andExpect(status().isBadRequest());
+
+        updateExpenses(id, Map.of("expenses", List.of(Map.of("description", "x".repeat(256), "amount", 10.00))))
+                .andExpect(status().isBadRequest());
+
+        updateExpenses(id, Map.of("expenses", List.of(Map.of("description", "Pedágio", "amount", 0))))
+                .andExpect(status().isBadRequest());
+
+        updateExpenses(id, Map.of("expenses", List.of(Map.of("description", "Pedágio", "amount", new BigDecimal("1.001")))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateExpenses_unknownTrip_returns404() throws Exception {
+        updateExpenses(999999L, Map.of("expenses", List.of(
+                Map.of("description", "Pedágio", "amount", 48.50))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.erro").exists());
+    }
+
+    private ResultActions updateExpenses(long id, Map<String, Object> body) throws Exception {
+        return mockMvc.perform(put("/api/viagens/{id}/gastos", id)
+                .header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)));
+    }
+
     private ResultActions update(long id, Map<String, Object> body) throws Exception {
         return mockMvc.perform(put("/api/viagens/{id}", id)
                 .header("Authorization", token)

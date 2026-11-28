@@ -156,6 +156,79 @@ class TripSecurityTest {
     }
 
     @Test
+    void put_viagensGastos_withoutToken_returns401() throws Exception {
+        mockMvc.perform(put("/api/viagens/{id}/gastos", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expenses\":[]}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void put_viagensGastos_withoutPermission_returns403() throws Exception {
+        mockMvc.perform(put("/api/viagens/{id}/gastos", 1)
+                        .header("Authorization", tokenSemPermissaoViagens)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expenses\":[]}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void put_viagensGastos_withOnlyViagensViewPermission_returns403() throws Exception {
+        Profile perfilLeituraViagens = profileRepository.save(new Profile("Perfil Leitura Viagens"));
+        List<Permission> somenteView = permissionRepository.findAll().stream()
+                .filter(p -> p.getAuthority().equals("viagens:view"))
+                .toList();
+        perfilLeituraViagens.grantPermissions(somenteView);
+
+        Collaborator userLeitura = collaboratorRepository.save(new Collaborator(
+                "Usuário Leitura Viagens",
+                new Date(),
+                Position.OTHER,
+                true,
+                perfilLeituraViagens,
+                "leitura.viagens@marazul.test",
+                null,
+                null,
+                "hash-irrelevante"));
+
+        String tokenSomenteView = "Bearer " + jwtService.generateToken(userLeitura);
+
+        mockMvc.perform(put("/api/viagens/{id}/gastos", 1)
+                        .header("Authorization", tokenSomenteView)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expenses\":[]}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void put_viagensGastos_withViagensEditPermission_passesSecurity() throws Exception {
+        Profile perfilEdicaoViagens = profileRepository.save(new Profile("Perfil Edição Viagens"));
+        List<Permission> somenteEdit = permissionRepository.findAll().stream()
+                .filter(p -> p.getAuthority().equals("viagens:edit"))
+                .toList();
+        perfilEdicaoViagens.grantPermissions(somenteEdit);
+
+        Collaborator userEdicao = collaboratorRepository.save(new Collaborator(
+                "Usuário Edição Viagens",
+                new Date(),
+                Position.OTHER,
+                true,
+                perfilEdicaoViagens,
+                "edicao.viagens@marazul.test",
+                null,
+                null,
+                "hash-irrelevante"));
+
+        String tokenSomenteEdit = "Bearer " + jwtService.generateToken(userEdicao);
+
+        mockMvc.perform(put("/api/viagens/{id}/gastos", 999999)
+                        .header("Authorization", tokenSomenteEdit)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expenses\":[]}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void delete_viagens_withoutToken_returns401() throws Exception {
         mockMvc.perform(delete("/api/viagens/{id}", 1))
                 .andExpect(status().isUnauthorized());

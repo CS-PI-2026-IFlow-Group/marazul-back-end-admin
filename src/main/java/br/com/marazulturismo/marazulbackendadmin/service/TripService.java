@@ -2,6 +2,7 @@ package br.com.marazulturismo.marazulbackendadmin.service;
 
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripExpenseRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripExpensesRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripListResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
@@ -44,6 +45,14 @@ import java.util.Set;
 public class TripService {
 
     private static final Set<TripStatus> EDITABLE_STATUSES = EnumSet.of(TripStatus.SCHEDULED, TripStatus.CONFIRMED);
+    private static final Set<TripStatus> EXPENSE_EDITABLE_STATUSES = EnumSet.of(
+            TripStatus.SCHEDULED,
+            TripStatus.CONFIRMED,
+            TripStatus.LEFT_ORIGIN,
+            TripStatus.ARRIVED_DESTINATION,
+            TripStatus.LEFT_DESTINATION,
+            TripStatus.ARRIVED_ORIGIN
+    );
 
     private final TripRepository tripRepository;
     private final CityRepository cityRepository;
@@ -157,6 +166,20 @@ public class TripService {
         replaceExpensesIfProvided(trip, dto.expenses());
         trip.setResponsiblePassenger(resolveResponsible(dto.responsiblePassengerId(), trip.getPassengers()));
         return TripResponseDTO.fromEntity(tripRepository.save(trip));
+    }
+
+    @Transactional
+    public TripResponseDTO updateExpenses(Long id, TripExpensesRequestDTO dto) {
+        if (dto == null || dto.expenses() == null) {
+            throw new TripValidationException("A lista de gastos é obrigatória.");
+        }
+        Trip trip = findEntity(id);
+        if (!EXPENSE_EDITABLE_STATUSES.contains(trip.getStatus())) {
+            throw new TripValidationException("A viagem " + trip.getId()
+                    + " já foi concluída e não permite alterar os gastos.");
+        }
+        replaceExpensesIfProvided(trip, dto.expenses());
+        return TripResponseDTO.fromEntity(tripRepository.saveAndFlush(trip));
     }
 
     @Transactional

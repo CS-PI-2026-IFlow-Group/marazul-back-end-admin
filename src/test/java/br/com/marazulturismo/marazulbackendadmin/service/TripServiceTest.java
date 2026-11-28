@@ -1,15 +1,19 @@
 package br.com.marazulturismo.marazulbackendadmin.service;
 
+import br.com.marazulturismo.marazulbackendadmin.dto.TripExpenseRequestDTO;
+import br.com.marazulturismo.marazulbackendadmin.dto.TripExpensesRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripPassengerRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripRequestDTO;
 import br.com.marazulturismo.marazulbackendadmin.dto.TripResponseDTO;
 import br.com.marazulturismo.marazulbackendadmin.enums.BodyworkModel;
 import br.com.marazulturismo.marazulbackendadmin.enums.CNHType;
 import br.com.marazulturismo.marazulbackendadmin.enums.Position;
+import br.com.marazulturismo.marazulbackendadmin.enums.TripStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleStatus;
 import br.com.marazulturismo.marazulbackendadmin.enums.VehicleType;
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.PassengerValidationException;
+import br.com.marazulturismo.marazulbackendadmin.exception.TripNotFoundException;
 import br.com.marazulturismo.marazulbackendadmin.exception.TripValidationException;
 import br.com.marazulturismo.marazulbackendadmin.model.Address;
 import br.com.marazulturismo.marazulbackendadmin.model.CNH;
@@ -321,6 +325,95 @@ class TripServiceTest {
         assertThat(expenseRepository.findByTripId(created.id())).isEmpty();
         assertThat(passengerRepository.findById(passengerOne.getId())).isPresent();
         assertThat(passengerRepository.findById(passengerTwo.getId())).isPresent();
+    }
+
+    @Test
+    void updateExpenses_allowsAllInProgressStagesWithPastScheduleAndPreservesOtherFields() {
+        var cities = cityRepository.findAll();
+        LocalDateTime pastDeparture = LocalDateTime.now().minusDays(2);
+        Trip trip = new Trip(
+                cities.get(0), cities.get(1),
+                pastDeparture, pastDeparture.plusHours(4),
+                pastDeparture.plusDays(1), pastDeparture.plusDays(1).plusHours(4),
+                vehicle, Set.of(driver), null, 1, "Observação original");
+        trip.addPassenger(new TripPassenger(trip, passengerOne, new BigDecimal("150.00"), new BigDecimal("50.00")));
+        trip.addExpense(new Expense("Gasto inicial", new BigDecimal("30.00")));
+        trip = tripRepository.saveAndFlush(trip);
+
+        for (TripStatus stage : List.of(
+                TripStatus.SCHEDULED,
+                TripStatus.CONFIRMED,
+                TripStatus.LEFT_ORIGIN,
+                TripStatus.ARRIVED_DESTINATION,
+                TripStatus.LEFT_DESTINATION,
+                TripStatus.ARRIVED_ORIGIN)) {
+            trip.advanceTo(stage, LocalDateTime.now().minusHours(1));
+            tripRepository.saveAndFlush(trip);
+
+            TripResponseDTO updated = tripService.updateExpenses(trip.getId(), new TripExpensesRequestDTO(List.of(
+                    new TripExpenseRequestDTO("Pedágio " + stage.name(), new BigDecimal("48.50")),
+                    new TripExpenseRequestDTO("Estacionamento", new BigDecimal("120.00")))));
+            tripRepository.flush();
+
+            assertThat(updated.status()).isEqualTo(stage);
+            assertThat(updated.expenses()).hasSize(2);
+            assertThat(updated.totalExpenses()).isEqualByComparingTo("168.50");
+            assertThat(updated.notes()).isEqualTo("Observação original");
+            assertThat(updated.plannedDepartureOrigin()).isEqualTo(pastDeparture);
+            assertThat(updated.passengers()).hasSize(1);
+            assertThat(expenseRepository.findByTripId(trip.getId())).hasSize(2);
+        }
+
+        TripResponseDTO cleared = tripService.updateExpenses(trip.getId(), new TripExpensesRequestDTO(List.of()));
+        tripRepository.flush();
+
+        assertThat(cleared.expenses()).isEmpty();
+        assertThat(cleared.totalExpenses()).isEqualByComparingTo("0.00");
+        assertThat(expenseRepository.findByTripId(trip.getId())).isEmpty();
+    }
+
+    @Test
+    void updateExpenses_rejectsCompletedTrip() {
+        var cities = cityRepository.findAll();
+        Trip trip = new Trip(
+                cities.get(0), cities.get(1),
+                DEPARTURE_ORIGIN, ARRIVAL_DESTINATION,
+                DEPARTURE_DESTINATION, ARRIVAL_ORIGIN,
+                vehicle, Set.of(driver));
+        trip.advanceTo(TripStatus.COMPLETED, LocalDateTime.now());
+        Trip saved = tripRepository.saveAndFlush(trip);
+
+        TripExpensesRequestDTO dto = new TripExpensesRequestDTO(List.of(
+                new TripExpenseRequestDTO("Pedágio", new BigDecimal("40.00"))));
+
+        assertThatThrownBy(() -> tripService.updateExpenses(saved.getId(), dto))
+                .isInstanceOf(TripValidationException.class)
+                .hasMessageContaining("concluída");
+    }
+
+    @Test
+    void updateExpenses_rejectsUnknownTripAndInvalidItems() {
+        TripExpensesRequestDTO validDto = new TripExpensesRequestDTO(List.of(
+                new TripExpenseRequestDTO("Pedágio", new BigDecimal("40.00"))));
+
+        assertThatThrownBy(() -> tripService.updateExpenses(999999L, validDto))
+                .isInstanceOf(TripNotFoundException.class);
+
+        TripResponseDTO created = tripService.create(request(null, null, null));
+
+        assertThatThrownBy(() -> tripService.updateExpenses(created.id(), new TripExpensesRequestDTO(null)))
+                .isInstanceOf(TripValidationException.class)
+                .hasMessageContaining("obrigatória");
+
+        assertThatThrownBy(() -> tripService.updateExpenses(created.id(), new TripExpensesRequestDTO(List.of(
+                new TripExpenseRequestDTO("   ", new BigDecimal("10.00"))))))
+                .isInstanceOf(TripValidationException.class)
+                .hasMessageContaining("descrição");
+
+        assertThatThrownBy(() -> tripService.updateExpenses(created.id(), new TripExpensesRequestDTO(List.of(
+                new TripExpenseRequestDTO("Pedágio", BigDecimal.ZERO)))))
+                .isInstanceOf(TripValidationException.class)
+                .hasMessageContaining("maior que zero");
     }
 
     private Client saveClient() {
