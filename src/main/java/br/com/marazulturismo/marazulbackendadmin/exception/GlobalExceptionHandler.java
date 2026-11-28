@@ -142,6 +142,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
     }
 
+    @ExceptionHandler(ReportFilterValidationException.class)
+    public ResponseEntity<Map<String, String>> handleReportFilterValidation(ReportFilterValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(ex.getMessage()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> handleNotReadable(HttpMessageNotReadableException ex) {
         String message = "Requisição inválida: verifique o formato dos dados enviados.";
